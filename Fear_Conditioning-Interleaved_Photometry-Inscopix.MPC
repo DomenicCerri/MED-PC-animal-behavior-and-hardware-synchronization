@@ -1,0 +1,156 @@
+\Fear conditioning for photometry with optional interleaving
+\120s habituation followed by 5 pseudorandomly presented tone-shock pairings followed by 120s post conditioning period
+\30 s 8khz tone coterminating with a 2s shock (set to .6mA)
+
+\Created: 11/2/2021
+
+\Defined Constants
+^FAN = 10
+^SPECT = 17
+^PURPLE = 18
+^BLUE = 19
+^INSCOPIX = 21
+^VIDEO = 32
+
+VAR_ALIAS Spectrometer Freq [ms] = A
+VAR_ALIAS Spectrometer Interleave Gap [ms] = G
+VAR_ALIAS Footshock Duration [ms] = N
+VAR_ALIAS Footshock Output = P
+VAR_ALIAS Tone Duration [ms] = O
+VAR_ALIAS Tone Frequency = P
+VAR_ALIAS Tone Decibals = R
+
+\Variables
+\A = Photometry Frequency
+\B = Shock Output
+\C = Shock Onset time
+\D = 
+\E = Trigger per second
+\F = 
+\G = Photometry Offset
+\H = 
+\I = 
+\J = ITI Array
+\K = 
+\L = Current ITI
+\M = 
+\N = Footshock Duration
+\O = Tone duration
+\P = Tone Frequency
+\Q = 
+\R = Tone Amplitude
+\S = Tone Rise Time
+\Z(1) = X Array Position
+\Z(2) = Y Array Position
+\Z(3) = 
+\Z(4) = Photometry trigger counter
+\Z(5) = Current Timestamp
+\Z(6) = 
+\Z(7) =
+\Z(8) = 
+\Z(9) = U Array Position
+\Z(10) = V Array Position
+
+\Dimension Variables
+DIM U = 10
+DIM V = 100000
+DIM X = 10
+DIM Y = 10
+DIM Z = 11
+
+DISKCOLUMNS = 1
+
+\Z Pulses
+\Z1 = Trigger at Frequency
+\Z2 = End Session
+\Z3 = 
+\Z4 = Offset Trigger
+\Z5 = Cue
+\Z6 = Shock Timestamp
+
+LIST J =  20", 53", 87", 120"
+
+\Set Variables
+VAR_ALIAS Spectrometer Freq [ms]  = A
+VAR_ALIAS Spectrometer Interleave Gap [ms] = G
+VAR_ALIAS Shock Duration = N
+VAR_ALIAS Shock Output = B
+VAR_ALIAS Tone Duration [ms] = O
+VAR_ALIAS Tone Frequency [Hz] = P
+VAR_ALIAS Tone Amplitude [db] = R
+VAR_ALIAS Tone Rise Time [ms] = S
+
+
+S.S.1, \Setup Start and Timer
+	S1,
+		0.001": LOCKOFF ^PURPLE, ^BLUE, ^VIDEO, ^SPECT, ^INSCOPIX, ^FAN; ON ^PURPLE, ^BLUE, ^VIDEO, ^SPECT, ^INSCOPIX, ^FAN;
+		SET N = 2000, A = 50, O = 30000, P = 8000, R = 80, S = 10, B = 9, Z(4) = 0, Z(1) = 0, Z(2) = 0, Z(6) = 0, G = 5, Z(9) = 0, Z(10) = 0---> S2
+	S2,
+		#START: ~SetRack(MG, 1);~; \ The ANL-926 cards are in Rack 1
+                	~InitANL926;~; \ Reset ANL-926
+                	~SetAmp(MG, BOX, R);~; \ Initialize Amplitude
+                	~SetRF(MG, BOX, S);~; \ Initialize Rise\Fall Time
+                	~SetDur(MG, BOX, O);~; \ Initialize Duration
+			SET E = 1000/A, C = O-N ---> S3
+	S3,
+		A#T: ADD Z(4); SET Z(5) = Z(4)/E; Z1 ---> SX
+		#Z2: ON ^BLUE, ^PURPLE, ^VIDEO, ^SPECT, ^INSCOPIX; OFF ^FAN; LOCKON ^BLUE, ^PURPLE, ^VIDEO, ^SPECT, ^INSCOPIX ---> STOPABORTFLUSH
+
+S.S.2, \Interleaving offset
+	S1,
+		#Z1: ---> S2
+	S2,
+		G#T: Z4 ---> S1
+
+S.S.3, \Laser Interleaving 
+	S1,
+		#Z1: ON ^BLUE; OFF ^PURPLE ---> S2
+		#Z2: ---> S3
+	S2,
+		#Z1: ON ^PURPLE; OFF ^BLUE --->S1
+		#Z2: ---> S3
+	S3,
+		0.001":--->SX
+
+S.S.4, \Spectrometer and Video Trigger
+	S1,
+		#Z4: OFF ^SPECT, ^VIDEO; SET V(Z(10)) = Z(5) - A/1000; ADD Z(10); SET V(Z(10)) = -987.987 ---> S2
+	S2,
+		0.002": ON ^SPECT, ^VIDEO --->S1
+
+S.S.5, \Cue
+	S1,
+		#Z5: ~OnFreq(MG, BOX, P);~ --->SX
+
+S.S.6, \Inscopix Trigger
+	S1,
+		#Z4: OFF ^INSCOPIX; SET U(Z(9)) = Z(5) - A/1000; ADD Z(9); SET U(Z(9)) = -987.987--->S2
+	S2,
+		#Z2: ON ^INSCOPIX; SET U(Z(9)) = Z(5) - A/1000; ADD Z(9); SET U(Z(9)) = -987.987--->SX
+
+S.S.7, \Timestamps and Display
+	S1,
+		#Z5: SET X(Z(1)) = Z(5) - A/1000; ADD Z(1); SET X(Z(1)) = -987.987; SHOW 1, Tones, Z(1) ---> SX
+		#Z6: SET Y(Z(2)) = Z(5) - A/1000; ADD Z(2); SET X(Z(2)) = -987.987; SHOW 2, Shocks, Z(2) ---> SX
+
+S.S.8, \Fear Conditioning
+	S1, 
+		#Z4: ---> S2
+	S2, 
+		120": Z5 ---> S3
+	S3,
+		O#T: IF Z(1) >= 5 [@TRUE, @FALSE]
+			@TRUE: ---> S5
+			@FALSE: RANDD L = J ----> S4
+	S4,
+		L#T: Z5; ---> S3
+	S5,
+		120": Z2 ---> SX
+
+S.S.9, \Shock
+	S1,
+		#Z5: ---> S2
+	S2,
+		C#T: ON B; Z6 ---> S3
+	S3,
+		N#T: OFF B ---> S1

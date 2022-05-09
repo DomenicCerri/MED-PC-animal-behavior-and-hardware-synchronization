@@ -1,0 +1,7 @@
+doc = GetActiveDocument()
+Rename(doc, doc.Event003, "S2_Tone")
+Rename(doc, doc.Event004, "S1_SolidLight")
+Rename(doc, doc.Event005, "S2_Noise")
+Rename(doc, doc.Event006, "S1_FlashingLight")
+Rename(doc, doc.Event007, "FoodcupEntry")
+Rename(doc, doc.Event008, "FoodcupExit")

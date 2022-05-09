@@ -1,0 +1,119 @@
+\Nosepoking with Opto
+\Description: Nose poke for reward
+\Created: 11/12/14
+\Last Updated: 
+
+\Defined Constants
+^LLEVER = 1
+^RLEVER = 2
+^Nosepoke = 6
+^WHITE NOISE = 7
+^HOUSE LIGHT = 8
+^FAN = 10
+^LASER = 33
+
+\Variables
+\A = Nosepoke state
+\B = Stim Duration Array State
+\C = 
+\D = 
+\E = 
+\F = Stim Timeout Duration
+\G = Block Duration
+\H = Current Stim Duration
+\I = Timestamp Array
+	\I(0)=Nosepoke Timestamp
+	\I(1)=Nosepoke Release Timestamp
+	\I(2)=Reinforced Nosepoke Timestamp
+	\I(3)=Block Advance Timestamp
+\J = Stim Duration by Block Array
+	\I(0)=Block 1 Stim Duration
+	\I(1)=Block 2 Stim Duration
+	\I(2)=Block 3 Stim Duration
+	\I(3)=Block 4 Stim Duration
+	\I(4)=Block 5 Stim Duration
+	\I(5)=Block Force End
+\K = 
+\L =
+\M =
+\N =
+\O =
+\P = 
+\Q = 
+\R = 
+\S = 
+\T = 
+\U = 
+\V = Block Advance Timestamp
+\W = Reinforced Nosepoke Timestamp
+\X = Nosepoke Release Timestamp
+\Y = Nosepoke Timestamp
+\Z = NOWAIT
+
+\Set Variables
+VAR_ALIAS Block1 Stim  [noblock<0extinction>stim"] = J(0)
+VAR_ALIAS Block2 Stim  [noblock<0extinction>stim"] = J(1)
+VAR_ALIAS Block3 Stim  [noblock<0extinction>stim"] = J(2)
+VAR_ALIAS Block4 Stim  [noblock<0extinction>stim"] = J(3)
+VAR_ALIAS Block5 Stim  [noblock<0extinction>stim"] = J(4)
+VAR_ALIAS Timeout Duration [mustbe=>loweststimduration] = F
+VAR_ALIAS Block Duration = G
+
+\Dimension Variables
+
+DIM I = 3
+DIM J = 5
+DIM Y = 1000
+DIM X = 1000
+DIM W = 1000
+DIM V = 1000
+
+DISKCOLUMNS = 1
+
+S.S.1 \Start and Kill Session
+	S1,
+		0.001": SET J(0) = 5", J(1) = 0, J(2) = 5", J(3) = -1, J(4) = -1, J(5) = -1, F = 5", G = 30', B = 0; ON ^LLEVER, ^RLEVER; LOCKOn ^LLEVER, ^RLEVER---> S2
+	S2,
+		#Z1: OFF ^FAN, ^HOUSE LIGHT, ^WHITE NOISE, ^Laser ---> STOPABORTFLUSH
+
+S.S.2 \Blocks
+	S1,
+		#Start: On ^FAN, ^HOUSE LIGHT, ^WHITE NOISE; SET H = J(B); SHOW 3, BLOCK, B+1; SHOW 1, POKES, I(0); SHOW 2, STIM POKES, I(2) ---> S2  
+	S2,
+		G#T: ADD B; SET H = J(B); IF H < 0 [@End, @Continue]
+			@End: Z1 ---> S1
+			@Continue: Z5; ---> SX
+
+S.S.3 \Nosepokes
+	S1,
+      		#START: ---> S2
+	S2,   
+       		#R^Nosepoke: ADD A; if A >= 2 [@BeamBreak, @NoBeamBreak]
+             	 	@BeamBreak: Z2; Set A = 0 ---> S3
+              		@NoBeamBreak: ---> SX
+	S3,    
+      		0.02": Z3 ---> S2
+       		#R^Nosepoke: ---> S3
+
+S.S.4 \Stims
+	S1,
+		#Z2: IF H = 0 [@Extinction, @Stim]
+			@Extinction: ---> SX
+			@Stim: ON ^Laser; Z4 ---> S2
+	S2,
+		H#T: OFF ^Laser ---> S1
+		
+S.S.5 \Timer
+	S1,
+		#START: --->S2
+	S2,
+		.001": SET T = T + .001; ---> SX
+
+S.S.6 \Record Timestamps
+	S1, 
+		#Z2: SET Y(I(0)) = T; ADD I(0); SET Y(I(0)) = -987.987; SHOW 1, POKES, I(0) ---> SX
+		#Z3: SET X(I(1)) = T; ADD I(1); SET X(I(1)) = -987.987 ---> SX
+		#Z4: SET W(I(2)) = T; ADD I(2); SET W(I(2)) = -987.987; SHOW 2, STIM POKES, I(2) ---> SX
+		#Z5: SET V(I(3)) = T; ADD I(3); SET V(I(3)) = -987.987; SHOW 3, BLOCK, B+1 --->SX
+
+		

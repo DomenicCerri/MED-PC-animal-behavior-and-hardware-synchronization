@@ -1,0 +1,259 @@
+\ Sensory Pre-Conditioning (SPC): PreConditioning training (multi-cue) A
+\ Description: 12 pairings each of Flashing(R)LIGHT(S2) --> Noise(S1) and Solid(L)Light(S2) --> TONE(S1)
+\ Created: 3/30/11
+\ Last Updated:9/14/2011
+\ Author: Michael Saddoris & Domenic Cerri
+
+\Inputs
+^LLever=2
+^RLever=1
+^Foodcup=5
+
+\Outputs
+^RPanelLight=3
+^LPanelLight=4
+^Tone=6
+^Noise=7
+^Houselight=8
+^Fan=10
+^Pellet=11
+^Cue_LED=12
+^TTL_TONE=17
+^TTL_SolidLight=18
+^TTL_NOISE=19
+^TTL_FlashingLight=20
+^TTL_FOODCUP_ENTRY=22
+^TTL_FOODCUP_EXIT=23
+
+\Variables
+\ A = LIST ITIs (Set A)
+\ B = LIST ITIs (Set B)
+\ C = LIST ITIs (Set C)
+\ D = LIST CS Type (Set A)
+\ E = LIST CS Type (Set B)
+\ F = LIST CS Type (Set C)
+\ G = Current ITI
+\ H = Current Trial Type
+\ I = 
+\ J = CS+Reinforced Total Counter
+\ K = CS+NonReinforced Total Counter
+\ L = CS- Total Counter
+\ M = Location in Trial Type array
+\ N = Array of SOC trial types
+\ O = ToneGenerator - Tone Frequency
+\ P = ToneGenerator - Tone Volume (amplitude)
+\ Q = ToneGenerator - Attack/Decay Time
+\ R = ToneGenerator - Duration of Tone
+\ S = Session Timer
+\ T = 
+\ U = 
+\ V = 
+\ W = 
+\ X = 
+\ Y = Temp Counter for FC entries/exits
+\ Z = 
+
+\Zpulses:
+\Z1  - 10s Flashing Light
+\Z2  - 
+\Z3  - 
+\Z4  - 
+\Z5  - 10s Solid Light
+\Z6  - 
+\Z7  - 10s Noise
+\Z8  - 
+\Z9  - 10s Tone
+\Z10 - 
+\Z11 - 
+\Z12 -
+\Z13 -
+\Z14 - 
+\Z15 -
+\Z16 -
+\Z17 - 
+\Z18 - 
+\Z19 - 
+\Z20 - 
+\Z21 - 
+\Z22 - 
+\Z23 - 
+\Z24 - 
+\Z25 - 
+\Z26 - 
+\Z27 - 
+\Z28 - 
+\Z29 - 
+\Z30 - 
+
+
+LIST A = 105", 260", 175", 230", 205", 255", 205", 200", 180", 175", 190", 150", 180", 85", 135", 95", 215", 230", 80", 145", 195", 230", 115", 85", 200", 135", 95", 170"
+LIST B = 95", 85", 240", 165", 165", 130", 250", 80", 240", 135", 160", 155", 185", 190", 115", 245", 215", 255", 135", 165", 110", 140", 120", 160", 175", 230", 245", 135"
+LIST C = 190", 120", 135", 160", 110", 195", 115", 235", 205", 130", 135", 115", 165", 230", 260", 205", 140", 235", 235", 125", 190", 150", 160", 210", 205", 100", 180", 85"
+LIST N = 1, 1, 2, 1, 2, 2, 1, 2, 1, 2
+LIST E = 2, 1, 2, 1, 1, 3, 2, 1, 2, 1, 1, 4, 2, 2, 1, 2, 1, 4, 2, 2, 2, 1, 1, 3, 2, 2, 1, 1, 2, 3, 2, 1, 1, 2, 1
+LIST F = 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 2, 0, 0, 1, 1, 1, 0, 0, 2, 1
+LIST Z = 11", 12", 13", 14"
+
+DISKCOLUMNS = 1
+
+S.S.1,
+      S1,
+          .1": ON ^LLever, ^RLever ---> S2
+      S2,
+          #START: ON ^Fan, ^Houselight ---> S3
+      S3, 
+          .1": IF M < 12 [@TRUE, @FALSE]
+               @TRUE: SHOW 1, FLASH_NOISE, M ---> S4
+               @FALSE: SHOW 1, FLASH_NOISE, M; OFF ^Fan, ^Houselight ---> S9
+      S4, 
+          .1": LIST G = A(I) ---> S5
+      S5,
+          G#T: ON ^Cue_LED ---> S6
+      S6, 
+          10": OFF ^Cue_LED; ADD M; Z1 ---> S7
+      S7,
+          10": Z7 ---> S8
+      S8,
+          10": ---> S3
+      S9, 
+          10': ON ^Fan, ^Houselight ---> S10
+      S10,
+          .1": IF M < 24 [@TRUE, @FALSE]
+               @TRUE: SHOW 2,SOLID_TONE, M-12 ---> S11
+               @FALSE: SHOW 2, SOLID_TONE, M-12; Z13 ---> S2
+      S11, 
+          .1": LIST G = B(I) ---> S12
+      S12,
+          G#T: ON ^Cue_LED ---> S13
+      S13, 
+          10": OFF ^Cue_LED; ADD M; Z5 ---> S14
+      S14,
+          10": Z9 ---> S15
+      S15,
+          10": ---> S10
+
+S.S.2,  \Flashing Right Panel Light
+      S1,   
+          #Z1: Z2; Z4 ---> S2
+      S2,  
+          10": Z3 ---> S1
+
+S.S.3, \Intermittent Light generator
+      S1,
+          #Z2: ---> S2
+      S2, 
+          0.25": ON ^RPanelLight ---> S3
+          #z3: OFF ^RPanelLight ---> S1
+      S3, 
+          0.25": OFF ^RPanelLight ---> S2
+          #z3: ---> S1
+
+S.S.4, \FlashingLight TTL
+      S1, 
+    	  #Z4: ON ^TTL_FlashingLight ---> S2
+      S2, 
+    	  0.001": OFF ^TTL_FlashingLight ---> S1
+
+S.S.5, \Solid Left Panel Light
+      S1, 
+          #Z5: ON ^LPanelLight; Z6 ---> S2
+      S2, 
+          10": OFF ^LPanelLight ---> S1
+
+S.S.6, \SolidLight TTL
+      S1,
+	  #Z6: ON ^TTL_SolidLight ---> S2
+      S2,
+	  0.001": OFF ^TTL_SolidLight ---> S1    
+
+S.S.7, \Noise 
+      S1, 
+          #Z7: Z8; ~OnFreq(MG, BOX,O);~; ---> Sx
+     
+S.S.8, \Noise Parameters
+      S1,
+          #Start: SET O = 800;           \ default freq = 1000 hz 
+                SET P = 90;             \ volume = 95 db
+                SET Q = 10;             \ rise\fall time = 10 ms
+                SET R = 10000;           \ duration = 10000 ms
+                ~InitANL926;~;        \ reset ANL-926
+                ~SetFreq(MG, BOX,O);~;      \ initialize frequency
+                ~SetAmp(MG, BOX,P);~;       \ initialize amplitude
+                ~SetRF(MG, BOX,Q);~;        \ initialize rise\fall time
+                ~SetDur(MG, BOX,R);~;       \ initialize duration
+                ~SETCLICKFREQ(MG,BOX,10);~;--->SX         \ SET CLICK FREQUENCY 
+
+S.S.10, \Noise TTL
+      S1,
+          #Z8: ON ^TTL_NOISE ---> S2
+      S2, 
+          0.001": OFF ^TTL_NOISE ---> S1
+
+S.S.11, \Tone
+      S1, 
+          #Z9: ON ^TONE; Z10 ---> S2
+      S2, 
+          10": OFF ^TONE ---> S1
+
+S.S.12, \Tone TTL
+      S1,
+          #Z10: ON ^TTL_TONE ---> S2
+      S2,
+          0.001": OFF ^TTL_TONE ---> S1
+
+S.S.13, \Beam Breaks
+      S1,
+          #START: ---> S2
+
+      S2,    \ THIS IS DIRECTLY FROM MED. "Beam Break Defined - 20 ms Break, 20 ms Release.
+       \ Inputs in Level Mode generate an input "count" on each interrupt. 
+       \ With a 1ms system resolution 2 counts will be reached in 20ms. The Z22 pulse
+       \ is used to signal a complete Beam Break. The second statement resets the
+       \ counter every 20 ms so that a partial Beam Break of less than 20 ms will 
+       \ constitute a response.
+
+          #R^Foodcup: ADD Y; if Y >= 2 [@BeamBreak, @NoBeamBreak]
+              @BeamBreak: Z11; Set Y = 0 ---> S3
+              @NoBeamBreak: ---> SX
+       S3,    \ As long as the Bream is broken, the second statement causes a re-entry to
+       \ this State. This resets the internal 20 ms timer so that it never times out.
+       \ When the beam is released for 20 ms, the time times out and a Z23 pulse
+       \ signals the release.
+
+          0.02": Z12 ---> S2
+          #R^Foodcup: ---> S3
+
+S.S.14, \FoodCup Entry TTL
+       S1, 
+          #Z11: ON ^TTL_FOODCUP_ENTRY ---> S2
+       S2, 
+          0.001": OFF ^TTL_FOODCUP_ENTRY ---> S1
+
+S.S.15, \FoodCup Exit TTL
+       S1,
+          #Z12: ON ^TTL_FOODCUP_EXIT ---> S2
+       S2,
+          0.001": OFF ^TTL_FOODCUP_EXIT ---> S1
+
+S.S.16, \Session timer. Returns timestamp S every 0.1"
+
+       S1,
+	  #START: ---> S2
+       S2, 
+	  .1": Set S = S + .1"; SHOW 5, Min, S/1' ---> SX
+
+S.S.17, \Kill session after all cues delivered
+
+       S1,
+          1": IF M < 24 [@Session, @Kill]
+             @Session: SHOW 4, TOTAL, J+K+L+M ---> SX
+             @Kill: ---> S2
+          #Z13: ---> S2
+       S2, 
+          30": OFF ^Houselight, ^Fan; LOCKON ^LLever, ^RLever ---> STOPABORTFLUSH
+
+
+
+
+
+

@@ -1,0 +1,95 @@
+\Defined Constants
+^LLEVER = 1
+^RLEVER = 2
+^MASK = 9
+^FAN = 10
+^PELLET = 11
+^LASER1 = 33
+^LASER2 = 34
+
+\Variables
+\B = Timestamp: Left Presses
+\C = Timestamp: Right Presses
+\D = Count: Left Presses
+\E = Count: Right Presses
+\T = Millisecond timer
+\U = Session Timer
+
+DIM A = 1000
+DIM C = 1000
+DIM E = 1000
+DIM G = 1000
+DIM I = 1000
+DIM K = 1000
+DIM M = 1000
+DIM O = 1000
+
+DISKCOLUMNS = 1
+
+\Z Pulses
+
+\List Variables
+LIST Q = 20",22",24",26",29",32",34",36",38",40"
+LIST R = 1,1,2,2,3
+LIST S = 1,2
+
+S.S.1, \Trial Selection
+	S1,
+		0.001": LOCKOFF ^LLEVER, ^RLEVER; ON ^LLEVER, ^RLEVER, ^FAN; ---> S2
+	S2,	
+		#START!#Z9: IF B + D < 60[@TRUE, @FALSE]
+			@TRUE: RANDD V = Q, W = R; IF W = 3 [@TRUE, @FALSE]
+				@TRUE: RANDD W = S ---> S3
+				@FALSE: ---> S3
+			@FALSE: LOCKON ^LLEVER, ^RLEVER; OFF ^FAN ---> STOPABORTFLUSH
+	S3,
+		V#T: Z(W) ---> S2
+	
+S.S.2, \LEFT LEVER LASER33 TRIAL
+	S1,
+		#Z1: OFF ^PELLET; ON ^MASK, ^LASER1 ---> S2
+	S2,
+		10": OFF ^MASK, ^LASER1,^LLEVER, ^RLEVER ---> S3
+	S3,
+		#R^LLEVER: Z3; ON ^LLEVER, ^RLEVER, ^PELLET ---> S1
+		#R^RLEVER: Z4; ON ^LLEVER, ^RLEVER ---> S1
+		20": Z5; ON ^LLEVER, ^RLEVER ---> S1
+
+S.S.3, \RIGHT LEVER LASER34 TRIAL
+	S1,
+		#Z2: OFF ^PELLET; ON ^MASK, ^LASER2 ---> S2
+	S2,
+		10": OFF ^MASK, ^LASER2, ^LLEVER, ^RLEVER ---> S3
+	S3,
+		#R^RLEVER: Z6; ON ^LLEVER, ^RLEVER, ^PELLET ---> S1
+		#R^LLEVER: Z7; ON ^LLEVER, ^RLEVER ---> S1
+		20": Z8; ON ^LLEVER, ^RLEVER ---> S1
+
+S.S.4, \TRIAL TIMER
+	S1,
+		#Z1!#Z2: ---> S2
+	S2,
+		30": Z9 ---> S1
+
+S.S.5, \Timer
+	S1,
+		#START: SET T = 0 ---> S2
+	S2,
+		.001": SET T = T + .001; ---> SX
+
+S.S.6, \Timestamps
+	S1,
+		#Z1: SET A(B) = T; ADD B; SET A(B) = -987.987; SHOW 1, LEFT LASER33 TRIALS, B ---> SX
+		#Z2: SET C(D) = T; ADD D; SET C(D) = -987.987; SHOW 2, RIGHT LASER34 TRIALS, D ---> SX
+		#Z3: SET E(F) = T; ADD F; SET E(F) = -987.987; SHOW 3, LEFT CORRECT, F ---> SX
+		#Z4: SET G(H) = T; ADD H; SET G(H) = -987.987 ---> SX
+		#Z5: SET I(J) = T; ADD J; SET I(J) = -987.987 ---> SX
+		#Z6: SET K(L) = T; ADD L; SET K(L) = -987.987; SHOW 4, RIGHT CORRECT, L ---> SX
+		#Z7: SET M(N) = T; ADD N; SET M(N) = -987.987 ---> SX
+		#Z8: SET O(P) = T; ADD P; SET O(P) = -987.987 ---> SX	
+
+S.S.7, \Time Remaining
+	S1,
+		#START: SET U = 3600" ---> S2
+	S2,
+		1": SET U = U - 1"; SHOW 5, TIME REMAINING, U/60" ---> SX

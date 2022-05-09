@@ -1,0 +1,176 @@
+\Nosepoking for Opto
+\Description: Nose poke for reward
+\Created: 1/8/15
+\Last Updated: 5/8/15
+
+\Defined Constants
+^LLEVER = 1
+^RLEVER = 2
+^NOSEPOKE = 5
+^Tone = 6
+^WHITE NOISE = 7
+^HOUSE LIGHT = 8
+^FAN = 10
+^PELLET = 11
+^LASER = 33
+
+\Variables
+\A = Nosepoke state
+\B = Stim Duration Array State
+\C = Block Duration Array State
+\D = Extinction Timeout
+\E = Shaping Pellets
+\F = Stim Timeout Duration
+\G = Current Block Duration
+\H = Current Stim Duration
+\I = Timestamp Array
+	\I(0)=Nosepoke Timestamp
+	\I(1)=Nosepoke Release Timestamp
+	\I(2)=Reinforced Nosepoke Timestamp
+	\I(3)=Block Advance Timestamp
+\J = Stim Duration by Block Array
+	\J(0)=Block 1 Stim Duration
+	\J(1)=Block 2 Stim Duration
+	\J(2)=Block 3 Stim Duration
+	\J(3)=Block 4 Stim Duration
+	\J(4)=Block 5 Stim Duration
+	\J(5)=Block Force End
+\K = Block Duration Array
+	\K(0)=Block 1 Stim Duration
+	\K(1)=Block 2 Stim Duration
+	\K(2)=Block 3 Stim Duration
+	\K(3)=Block 4 Stim Duration
+	\K(4)=Block 5 Stim Duration
+\L = Avoidance
+\M = List: Shaping ITIs
+\N = Current shaping ITI
+\O =
+\P = 
+\Q = 
+\R = 
+\S = 
+\T = 
+\U = 
+\V = Block Advance Timestamp
+\W = Reinforced Nosepoke Timestamp
+\X = Nosepoke Release Timestamp
+\Y = Nosepoke Timestamp
+\Z = NOWAIT
+
+\Set Variables
+VAR_ALIAS Block1 Stim  [noblock<0extinction>stim"] = J(0)
+VAR_ALIAS Block2 Stim  [noblock<0extinction>stim"] = J(1)
+VAR_ALIAS Block3 Stim  [noblock<0extinction>stim"] = J(2)
+VAR_ALIAS Block4 Stim  [noblock<0extinction>stim"] = J(3)
+VAR_ALIAS Block5 Stim  [noblock<0extinction>stim"] = J(4)
+VAR_ALIAS Extinction Cue Duration = F
+VAR_ALIAS Block1 Duration = K(0)
+VAR_ALIAS Block2 Duration = K(1)
+VAR_ALIAS Block3 Duration = K(2)
+VAR_ALIAS Block4 Duration = K(3)
+VAR_ALIAS Block5 Duration = K(4)
+VAR_ALIAS Extinction Timeout Duration = D
+VAR_ALIAS Shaping Trials = E
+VAR_ALIAS Avoidance [0off1on]= L 
+
+\Dimension Variables
+
+DIM I = 3
+DIM J = 5
+DIM K = 4
+DIM Y = 1000
+DIM X = 1000
+DIM W = 1000
+DIM V = 1000
+
+DISKCOLUMNS = 1
+
+\List Variables
+LIST M = 30", 45", 60", 75", 90"
+
+S.S.1 \Start and Kill Session
+	S1,
+		0.001": SET J(0) = 5", J(1) = -1, J(2) = -1, J(3) = -1, J(4) = -1, J(5) = -1, F = 5", K(0) = 30', K(1) = 75', K(2) = 45', K(3) = 30', K(4) = 30', B = 0, C = 0, D = 30', E = 0, L = 0; ON ^LLEVER, ^RLEVER; LOCKON ^LLEVER, ^RLEVER---> S2
+	S2,
+		#Z1: OFF ^FAN, ^Tone, ^Laser ---> STOPABORTFLUSH
+
+S.S.2 \Blocks
+	S1,
+		#Start: On ^FAN; SET H = J(B), G = K(C); SHOW 3, BLOCK, B+1; SHOW 1, POKES, I(0); SHOW 2, STIM POKES, I(2); Z5; if E > 0 [@Shaping, @False]
+			@Shaping: ---> S3
+			@False: ---> S2  
+	S2,
+		G#T ! #Z6: ADD B, C; SET H = J(B), G = K(C); IF H < 0 [@End, @Continue]
+			@End: Z1 ---> S1
+			@Continue: Z5 ---> SX
+	S3,
+		#Z7: ---> S2
+		
+S.S.3 \Nosepokes
+	S1,
+      		#START: ---> S2
+	S2,   
+       		#R^NOSEPOKE: ADD A; if A >= 2 [@BeamBreak, @NoBeamBreak]
+             	 	@BeamBreak: Z2; Set A = 0 ---> S3
+              		@NoBeamBreak: ---> SX
+	S3,    
+      		0.02": Z3 ---> S2
+       		#R^NOSEPOKE: ---> S3
+
+S.S.4 \Stims
+	S1,	
+		#Start: IF L = 0 [@Reward, @Avoid]
+			@Reward: ---> S2
+			@Avoid: ON ^Laser ---> S2
+	S2,
+		#Z2: IF H = 0 [@Extinction, @Stim]
+			@Extinction: ON ^TONE ---> S5
+			@Stim: ON ^Tone; Z4; IF L = 0 [@Reward, @Avoid]
+				@Reward: ON ^Laser ---> S3
+				@Avoid: OFF ^Laser ---> S3
+	S3,
+		H#T: OFF ^Tone; IF L = 0 [@Reward, @Avoid]
+				@Reward: OFF ^Laser ---> S2
+				@Avoid: ON ^Laser ---> S2
+	S4,
+		#Z2: ON ^TONE ---> S5
+		#Z5: ON ^Tone; IF L = 0 [@Reward, @Avoid]
+			@Reward: ON ^Laser ---> S3
+			@Avoid: OFF ^Laser ---> S3
+		D#T: Z6 ---> SX
+	S5,
+		F#T: OFF ^TONE ---> S4
+
+S.S.5 \Shaping
+	S1,
+		#START: if E > 0 [@Shaping, @False]
+			@Shaping: ON ^Pellet ---> S3
+			@False: ---> SX
+	S2,	
+		#Z4: IF E > I(2) [@Continue, @End]
+			@Continue: ---> SX
+			@End: Z7 ---> S1		
+		N#T: IF E > I(2) [@Continue, @End]
+			@Continue: ON ^Pellet ---> S3
+			@End: Z7 ---> S1		
+	S3,	
+		.25": OFF ^Pellet; RANDD N = M ---> S4
+	S4,
+		#Z4: IF E > I(2) [@Continue, @End]
+			@Continue: ---> S2
+			@End: Z7 ---> S1
+		
+S.S.6 \Timer
+	S1,
+		#START: --->S2
+	S2,
+		.001": SET T = T + .001; ---> SX
+
+S.S.7 \Record Timestamps
+	S1, 
+		#Z2: SET Y(I(0)) = T; ADD I(0); SET Y(I(0)) = -987.987; SHOW 1, POKES, I(0) ---> SX
+		#Z3: SET X(I(1)) = T; ADD I(1); SET X(I(1)) = -987.987 ---> SX
+		#Z4: SET W(I(2)) = T; ADD I(2); SET W(I(2)) = -987.987; SHOW 2, STIM POKES, I(2) ---> SX
+		#Z5: SET V(I(3)) = T; ADD I(3); SET V(I(3)) = -987.987; SHOW 3, BLOCK, B+1 --->SX
+
+		

@@ -1,0 +1,297 @@
+\Discounting for food reward with Opto
+\Description: Lever press for either immediate reward or delayed reward (lever A(0)). Starting block of A(2) forced  trials. Second block of A(3) forced or choice trials. Laser on for forced trials of type A(4).
+\Created: 3/30/2015
+\Last Updated: 4/29/2015
+
+\Defined Constants
+^LLEVER = 1
+^RLEVER = 2
+^RCUE = 3
+^LCUE = 4
+^WHITE NOISE = 7
+^HOUSE LIGHT = 8
+^FAN = 10
+^DISPENSER = 11
+^LASER = 33
+
+\Variables
+\A = ARRAY
+	\A(0)=Delay Lever
+	\A(1)=Delay
+	\A(2)=Number of Forced Block Trials
+	\A(3)=Number of Session Trials
+	\A(4)=Type of Laser Trials
+	\A(5)=Forced Block Trial Number
+	\A(6)=Current ITI
+	\A(7)=Session Block Trial Number
+	\A(8)=Trial Duration
+	\A(9)=Cue/Laser Duration
+	\A(10)=NOWAIT
+	\A(11)=Reward Laser
+	\A(12)=Continuous Reinforcement Rewards
+	\A(13)=Continuous Reinforcement Timeout
+	\A(14)=Continuous Reinforcement Left Rewards
+	\A(15)=Continuous Reinforcement Right Rewards
+\B = Timestamp: Delay Trials
+\C = Timestamp: Immediate Trials
+\D = Timestamp: Choice Trials
+\E = Timestamp: Delay Correct
+\F = Timestamp: Delay Error
+\G = Timestamp: Delay Timeout
+\H = List: Forced Block ITIs 
+\I = ARRAY
+	\I(0)=Count: Delay Trials
+	\I(1)=Count: Immediate Trials
+	\I(2)=Count: Choice Trials
+	\I(3)=Count: Delay Correct
+	\I(4)=Count: Delay Error
+	\I(5)=Count: Delay Timeout
+	\I(6)=Count: Immediate Correct
+	\I(7)=Count: Immediate Error
+	\I(8)=Count: Immediate Timeout
+	\I(9)=Count: Choice Delay
+	\I(10)=Count: Choice Immediate
+	\I(11)=Count: Choice Timeout
+	\I(12)=Count: CRF Left Presses
+	\I(13)=Count: CRF Right Presses
+\J = List: Force Block Trial Types (1)
+\K = Current Trial Type
+\L = List: Session Block Trial Types (1)
+\M = List: Session Block ITIs
+\N = Timestamp: Immediate Correct
+\O = Timestamp: Immediate Error
+\P = Timestamp: Immediate Timeout
+\Q = Timestamp: Choice Delay
+\R = Timestamp: Choice Immediate
+\S = Timestamp: Choice Timeout 
+\T = Timer
+\U = Timestamp: Continuous Reinforcement Left Reward
+\V = Timestamp: Continuous Reinforcement Right Reward
+\W = Force Block Trial Types (2)
+\X = Session Block Trial Types (2)
+\Y = 
+\Z = 	
+
+\Set Variables
+VAR_ALIAS Delayed LEVER [1left-2right] = A(0)
+VAR_ALIAS Delay = A(1)
+VAR_ALIAS START FORCED BLOCK TRIALS [0none-divisibleby5] = A(2)
+VAR_ALIAS SESSION TRIALS [divisibleby9] = A(3)
+VAR_ALIAS FORCED CHOICE LASER [0off-1Both-2Delay-3Immediate] = A(4)
+VAR_ALIAS TRIAL DURATION = A(8)
+VAR_ALIAS CUE/Laser DURATION = A(9)
+VAR_ALIAS REWARD LASER [0off-1all-2Delay-3Immediate] = A(11)
+VAR_ALIAS Continous Reinforcement Rewards Per Lever [0off] = A(12)
+VAR_ALIAS Continuous Reinforcement Timeout = A(13)
+
+\Dimension Variables
+DIM A = 16
+DIM I = 14
+DIM B = 1000
+DIM C = 1000
+DIM D = 1000
+DIM E = 1000
+DIM F = 1000
+DIM G = 1000
+DIM N = 1000
+DIM O = 1000
+DIM P = 1000
+DIM Q = 1000
+DIM R = 1000
+DIM S = 1000
+DIM U = 1000
+DIM V = 1000
+
+DISKCOLUMNS = 1
+
+\List Variables
+LIST H = 20",22",24",26",28",32",34",36",38",40"
+LIST J = 1,1,2,2,3
+LIST L = 1,1,2,2,3,3,4,4,4
+LIST M = 20",20",22",24",26",26",28",30",32",34",34",36",38",40",40"
+LIST W = 1,2
+LIST X = 1,2,3
+
+\Z Pulses
+\Z1 = Delay Trial
+\Z2 = Immediate Trial
+\Z3 = Choice Trial
+\Z4 = End Force Block/Begin Session Block
+\Z5 = End Current Trial
+\Z6 = Delay Correct
+\Z7 = Delay Error
+\Z8 = Delay Timeout
+\Z9 = Immediate Correct
+\Z10 = Immediate Error
+\Z11 = Immediate Timeout
+\Z12 = Choice Delay
+\Z13 = Choice Immediate
+\Z14 = Choice Timeout
+\Z15 = Kill Session
+\Z16 = CRF
+\Z17 = CRF Left
+\Z18 = CRF Right
+
+S.S.1 \Start and Kill Session
+	S1,
+		0.001": SET A(10) = 0, A(0) = 1, A(1) = 0", A(2) = 10, A(3) = 90, A(4) = 0, A(5) = 0, A(6) = 0", A(7) = 0, A(8) = 20", T = 0", A(9) = 5", A(11) = 0, A(12) = 0, A(13) = 60', A(14) = 0, A(15) = 0; LOCKOFF ^LLEVER, ^RLEVER; ON ^LLEVER, ^RLEVER, ^FAN, ^WHITE NOISE---> S2
+	S2,
+		#Z15: ON ^LLEVER, ^RLEVER; LOCKON ^LLEVER, ^RLEVER; OFF ^FAN, ^HOUSE LIGHT, ^WHITE NOISE, ^LCUE, ^RCUE ---> STOPABORTFLUSH
+
+S.S.2 \Forced Block
+	S1,
+		#Start: IF A(12) = 0 [@TRUE, @FALSE]
+			@TRUE: IF A(2) = 0 [@TRUE, @FALSE]
+				@TRUE: Z4 ---> SX
+				@FALSE: ---> S2
+			@FALSE: Z16 ---> SX
+	S2,
+		A(10)#T:ADD A(5); IF A(5) <= A(2) [@TRUE, @FALSE]
+			@TRUE: RANDD A(6) = H, K = J; IF K = 3 [@TRUE, @FALSE]
+				@TRUE: RANDD K = W ---> S3
+				@FALSE: ---> S3
+			@FALSE: Z4 ---> S1
+	S3,
+		A(6)#T:Z(K)---> S4
+	S4,
+		#Z5: ---> S2
+
+S.S.3 \Session Block
+	S1,
+		#Z4: ---> S2
+	S2,
+		A(10)#T:ADD A(7); IF A(7) <= A(3) [@TRUE, @FALSE]
+			@TRUE: RANDD A(6) = M, K = L; IF K = 4 [@TRUE, @FALSE]
+				@TRUE: RANDD K = X ---> S3
+				@FALSE: ---> S3
+			@FALSE: Z15 ---> S1
+	S3,
+		A(6)#T:Z(K)---> S4
+	S4,
+		#Z5: ---> S2
+
+S.S.4 \Delay Trial
+	S1,
+		#Z1: IF (A(4)=2) OR (A(4)=1) [@TRUE, @FALSE]
+			@TRUE: ON ^LASER; IF A(0) = 1 [@TRUE, @FALSE]
+				@TRUE: ON ^LCUE ---> S2
+				@FALSE: ON ^RCUE ---> S2
+			@FALSE: IF A(0) = 1 [@TRUE, @FALSE]
+				@TRUE: ON ^LCUE ---> S2
+				@FALSE: ON ^RCUE ---> S2
+	S2,
+		A(9)#T: OFF ^LLEVER, ^RLEVER, ^Laser ---> S3
+	S3,
+		#R^LLEVER: IF A(0) = 1 [@TRUE, @FALSE]
+				@TRUE: Z6; OFF ^RCUE, ^LCUE; ON ^LLEVER, ^RLEVER ---> S4
+				@FALSE: Z7; OFF ^RCUE, ^LCUE, ^WHITE NOISE; ON ^LLEVER, ^RLEVER, ^HOUSE LIGHT ---> S4
+		#R^RLEVER: IF A(0) = 2 [@TRUE, @FALSE]
+				@TRUE: Z6; OFF ^RCUE, ^LCUE; ON ^LLEVER, ^RLEVER ---> S4
+				@FALSE: Z7; OFF ^RCUE, ^LCUE, ^WHITE NOISE; ON ^LLEVER, ^RLEVER, ^HOUSE LIGHT ---> S4
+		#Z5: Z8; OFF ^RCUE, ^LCUE; ON ^LLEVER, ^RLEVER ---> S1
+	S4,
+		#Z5: OFF ^HOUSE LIGHT; ON ^WHITE NOISE ---> S1
+
+S.S.5 \Immediate Trial
+	S1,
+		#Z2: IF (A(4)=3) OR (A(4)=1) [@TRUE, @FALSE]
+			@TRUE: ON ^LASER; IF A(0) = 2 [@TRUE, @FALSE]
+				@TRUE: ON ^LCUE ---> S2
+				@FALSE: ON ^RCUE ---> S2
+			@FALSE: IF A(0) = 2 [@TRUE, @FALSE]
+				@TRUE: ON ^LCUE ---> S2
+				@FALSE: ON ^RCUE ---> S2
+	S2,
+		A(9)#T: OFF ^LLEVER, ^RLEVER, ^Laser ---> S3
+	S3,
+		#R^LLEVER: IF A(0) = 2 [@TRUE, @FALSE]
+				@TRUE: Z9; OFF ^RCUE, ^LCUE; ON ^LLEVER, ^RLEVER ---> S4
+				@FALSE: Z10; OFF ^RCUE, ^LCUE, ^WHITE NOISE; ON ^LLEVER, ^RLEVER, ^HOUSE LIGHT ---> S4
+		#R^RLEVER: IF A(0) = 1 [@TRUE, @FALSE]
+				@TRUE: Z9; OFF ^RCUE, ^LCUE; ON ^LLEVER, ^RLEVER ---> S4
+				@FALSE: Z10; OFF ^RCUE, ^LCUE, ^WHITE NOISE; ON ^LLEVER, ^RLEVER, ^HOUSE LIGHT ---> S4
+		#Z5: Z11; OFF ^RCUE, ^LCUE; ON ^LLEVER, ^RLEVER ---> S1
+	S4,
+		#Z5: OFF ^HOUSE LIGHT; ON ^WHITE NOISE ---> S1	
+
+S.S.6 \Choice Trial
+	S1,
+		#Z3: ON ^RCUE, ^LCUE ---> S2		 
+	S2,
+		A(9)#T: OFF ^LLEVER, ^RLEVER ---> S3
+	S3,
+		#R^LLEVER: IF A(0) = 1 [@TRUE, @FALSE]
+				@TRUE: Z12; OFF ^RCUE, ^LCUE; ON ^LLEVER, ^RLEVER ---> S4
+				@FALSE: Z13; OFF ^RCUE, ^LCUE; ON ^LLEVER, ^RLEVER ---> S4
+		#R^RLEVER: IF A(0) = 1 [@TRUE, @FALSE]
+				@TRUE: Z13; OFF ^RCUE, ^LCUE; ON ^LLEVER, ^RLEVER ---> S4
+				@FALSE: Z12; OFF ^RCUE, ^LCUE; ON ^LLEVER, ^RLEVER ---> S4
+		#Z5: Z14; OFF ^RCUE, ^LCUE; ON ^LLEVER, ^RLEVER ---> S1
+	S4,
+		#Z5: ---> S1
+
+S.S.7 \Continuous Reinforcement	
+	S1,
+		#Z16: OFF ^LLEVER, ^RLEVER ---> S2
+	S2,
+		#R^LLEVER: Z17; ADD A(14); IF A(14) < A(12) [@TRUE, @FALSE]
+			@TRUE: ---> SX
+			@FALSE: ON ^LLEVER; IF A(15) < A(12) [@TRUE, @FALSE]
+				@TRUE: ---> SX
+				@FALSE: ---> S3
+		#R^RLEVER: Z18; ADD A(15); IF A(15) < A(12) [@TRUE, @FALSE]
+			@TRUE: ---> SX
+			@FALSE: ON ^RLEVER; IF A(14) < A(12) [@TRUE, @FALSE]
+				@TRUE: ---> SX
+				@FALSE: ---> S3
+	S3,
+		10": Z15 ---> S1
+
+S.S.8 \Trial Timer
+	S1,
+		#Z1 ! #Z2 ! #Z3: ---> S2
+		#Z16: ---> S3
+	S2,
+		A(8)#T: Z5 ---> S1
+	S3,
+		A(13)#T: Z15 ---> S1
+
+S.S.9 \Reward
+	S1,
+		#Z9 ! #Z13 ! #Z17 ! #Z18: IF (A(11)=1) OR (A(11)=3) [@TRUE, @FALSE]
+			@TRUE: ON ^LASER, ^DISPENSER ---> S4
+			@FALSE: ON ^DISPENSER ---> S2
+		#Z6 ! #Z12: IF (A(11)=1) OR (A(11)=2) [@TRUE, @FALSE]
+			@TRUE: ON ^LASER ---> S3
+			@FALSE: ---> S3
+	S2,
+		.25": OFF ^DISPENSER, ^LASER ---> S1
+	S3,
+		A(1)#T: ON ^DISPENSER ---> S2
+	S4,
+		.25": OFF ^DISPENSER ---> S5
+	S5,
+		A(1)#T: OFF ^LASER ---> S1
+
+S.S.10 \Timer
+	S1,
+		#START: --->S2
+	S2,
+		.001": SET T = T + .001; ---> SX
+
+S.S.11 \Record Timestamps
+	S1,
+		#Z1: SET B(I(0)) = T; ADD I(0); SET B(I(0)) = -987.987; SHOW 1, Delay TRIALS, I(0)--->SX
+		#Z2: SET C(I(1)) = T; ADD I(1); SET C(I(1)) = -987.987; SHOW 2, Immediate TRIALS, I(1)--->SX	
+		#Z3: SET D(I(2)) = T; ADD I(2); SET D(I(2)) = -987.987; SHOW 3, Choice TRIALS, I(2)--->SX	 
+		#Z6: SET E(I(3)) = T; ADD I(3); SET E(I(3)) = -987.987; SHOW 4, Delay Correct, I(3) --->SX
+		#Z7: SET F(I(4)) = T; ADD I(4); SET F(I(4)) = -987.987; SHOW 5, Delay Error, I(4) --->SX
+		#Z8: SET G(I(5)) = T; ADD I(5); SET G(I(5)) = -987.987; SHOW 6, Delay Timeout, I(5)--->SX
+		#Z9: SET N(I(6)) = T; ADD I(6); SET N(I(6)) = -987.987; SHOW 7, Immediate Correct, I(6)--->SX
+		#Z10: SET O(I(7)) = T; ADD I(7); SET O(I(7)) = -987.987; SHOW 8, Immediate Error, I(7)--->SX
+		#Z11: SET P(I(8)) = T; ADD I(8); SET P(I(8)) = -987.987; SHOW 9, Immediate Timeout, I(8)--->SX
+		#Z12: SET Q(I(9)) = T; ADD I(9); SET Q(I(9)) = -987.987; SHOW 10, Choice Delay, I(9)--->SX
+		#Z13: SET R(I(10)) = T; ADD I(10); SET R(I(10)) = -987.987; SHOW 11, Choice Immediate, I(10)--->SX
+		#Z14: SET S(I(11)) = T; ADD I(11); SET S(I(11)) = -987.987; SHOW 12, Choice Timeout, I(11)--->SX
+		#Z17: SET U(I(12)) = T; ADD I(12); SET U(I(12)) = -987.987; SHOW 1, Left Presses, I(12)--->SX
+		#Z18: SET V(I(13)) = T; ADD I(13); SET V(I(13)) = -987.987; SHOW 2, Right Presses, I(13)--->SX

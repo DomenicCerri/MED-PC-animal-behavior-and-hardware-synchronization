@@ -1,0 +1,10 @@
+doc = GetActiveDocument()
+
+Rename(doc, doc.Event005, "CS-_Noise")
+Rename(doc, doc.Event007, "FoodcupEntry")
+Rename(doc, doc.Event008, "FoodcupExit")
+Rename(doc, doc.Event009, "Pellet")
+Rename(doc, doc.Event010, "CS+")
+Rename(doc, doc.Event011, "CS+NR")
+Rename(doc, doc.Event012, "CS-")
+

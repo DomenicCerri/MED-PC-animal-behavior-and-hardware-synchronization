@@ -1,0 +1,82 @@
+\10 Slice Trigger or Volume Trigger MRI with Interleaved Photometry
+
+\Created: 1/4/2020
+\Last Updated: 1/4/2020
+
+\Defined Constants
+^SPECT = 17
+^PURPLE = 18
+^BLUE = 19
+^MRI = 20
+^VIDEO = 32
+
+\Variables
+\A = Photometry Frequency
+\B = Photometry Trigger Counter
+\C = Total MRI Repetitions
+\D = MRI TR (seconds)
+\E = MRI TR/Photometry Frequency
+\F = MRI TR (ms)
+\G = MRI trigger Counter
+
+\Set Variables
+VAR_ALIAS Spectrometer Freq[ms]  = A
+VAR_ALIAS MRI Total Repetitions  = C
+VAR_ALIAS MRI Repetition Time[ms] = F
+VAR_ALIAS MRI Trigger[1volume2slice] = H
+VAR_ALIAS Slices [DoNOTChange] = I
+
+\Z Pulses
+\Z1 = Trigger at Frequency
+\Z2 = End Session
+
+S.S.1, \Setup Start and Finish
+	S1,
+        	0.001": LOCKOFF ^PURPLE, ^BLUE, ^MRI, ^VIDEO, ^SPECT; ON ^PURPLE, ^BLUE, ^VIDEO, ^SPECT; SET A = 100, B = 0, C = 300, F = 1000, G = 0, H = 2, I = 10 ---> S2
+	S2,
+		#START: SET E = F/A ---> S3
+	S3,
+		A#T: ADD B; SET D = B/E; IF D<=C [@TRUE, @FALSE]
+			@TRUE: Z1 --->SX
+			@FALSE: Z2; ON ^BLUE, ^PURPLE, ^VIDEO, ^SPECT; OFF ^MRI; LOCKON ^BLUE, ^PURPLE, ^MRI, ^VIDEO, ^SPECT --->STOPABORTFLUSH
+S.S.2, 	\Laser Interleaving
+	S1,
+		#Z1: ON ^BLUE; OFF ^PURPLE ---> S2
+		#Z2: ---> S3
+	S2,
+		#Z1: ON ^PURPLE; OFF ^BLUE --->S1
+		#Z2: ---> S3
+	S3,
+		0.001":--->SX
+
+S.S.3, \MRI Trigger
+	S1,
+		#START: IF H=1 [@TRUE, @FALSE]
+			@TRUE: ---->S2
+			@FALSE: J=F/I; Z4 ---->S3
+	S2,
+		#Z1: ADD G; IF G=E [@TRUE, @FALSE]
+			@TRUE: SET G = 0; ON ^MRI; Z3 --->SX
+			@FALSE: --->SX 
+		#Z2: ---> S4
+	S3,
+		#Z1: ADD G; IF G*A=J [@TRUE, @FALSE]
+			@TRUE: SET G = 0; ON ^MRI; Z3 --->SX
+			@FALSE: --->SX 
+		#Z2: ---> S4
+	S4,
+		0.001":--->SX
+
+S.S.4, \Spectrometer and Video Trigger
+	S1,
+		#Z1: --->S2
+	S2,
+		0.001": OFF ^SPECT, ^VIDEO --->S3
+	S3,
+		0.002": ON ^SPECT, ^VIDEO --->S1
+
+S.S.5, \MRI Trigger Off
+	S1,
+		#Z3: ---> S2
+	S2,
+		0.01": 0FF ^MRI --->S1

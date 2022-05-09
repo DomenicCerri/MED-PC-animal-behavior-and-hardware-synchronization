@@ -1,0 +1,278 @@
+\ Seensory Preconditionin: First order training
+\ Description: 28 light cues (14 CS+, 14 CS-); CS+ coterminates with 3 pellets on a 85% reinforcement (12/14) schedule
+\ Created: 12/10/09
+\ Last Updated:
+\ Author: Michael Saddoris
+
+\Inputs
+^LLever=2
+^RLever=1
+^Foodcup=5
+
+\Outputs
+^RPanelLight=3
+^LPanelLight=4
+^Tone=6
+^Noise=7
+^Houselight=8
+^Fan=10
+^Pellet=11
+^Cue_LED=12
+^TTL_S2TONE=17
+^TTL_S1SolidLight=18
+^TTL_S2NOISE=19
+^TTL_S1FlashingLight=20
+^TTL_S1FlashingLightNR=21
+^TTL_FOODCUP_ENTRY=22
+^TTL_FOODCUP_EXIT=23
+^TTL_START=24
+^TTL_END=25
+^TTL_Pellet=26
+
+\Variables
+\ A = LIST ITIs (Set A)
+\ B = LIST ITIs (Set B)
+\ C = LIST ITIs (Set C)
+\ D = LIST CS Type (Set A)
+\ E = LIST CS Type (Set B)
+\ F = LIST CS Type (Set C)
+\ G = Current ITI
+\ H = Current Trial Type
+\ I = 
+\ J = CS+Reinforced Total Counter
+\ K = CS+NonReinforced Total Counter
+\ L = CS- Total Counter
+\ M = 
+\ N = 
+\ O = 
+\ P = 
+\ Q = 
+\ R = 
+\ S = Session Timer
+\ T = 
+\ U = 
+\ V = 
+\ W = 
+\ X = 
+\ Y = Temp Counter for FC entries/exits
+\ Z = 
+
+\Zpulses:
+\Z1  - Pre-CS Start
+\Z2  - CS+ Detector
+\Z3  - CS+(Non-reinforced) Detector
+\Z4  - CS- Detector
+\Z5  - 
+\Z6  - 
+\Z7  - 
+\Z8  - 
+\Z9  - Kills Intermittent Light
+\Z10 - Initiates Intermittent Light
+\Z11 - Pellet Delivery Start
+\Z12 -
+\Z13 -
+\Z14 - 
+\Z15 -
+\Z16 -
+\Z17 - Event003 - 
+\Z18 - Event004 - 
+\Z19 - Event005 - CS Plus (Reinforced)
+\Z20 - Event006 - CS Minus
+\Z21 - Event007 - CS Plus (Nonreinforced)
+\Z22 - Event008 - Foodcup Entry
+\Z23 - Event009 - Foodcup Exit
+\Z24 - Event010 - Starts Session
+\Z25 - Event011 - 
+\Z26 - Event012 - 
+\Z27 - Event013 - 
+\Z28 - Event014 -
+\Z29 - Event015 -
+\Z30 - Event016 -
+
+
+LIST A = 105", 260", 175", 230", 205", 255", 205", 200", 180", 175", 190", 150", 180", 85", 135", 95", 215", 230", 80", 145", 195", 230", 115", 85", 200", 135", 95", 170"
+LIST B = 95", 85", 240", 165", 165", 130", 250", 80", 240", 135", 160", 155", 185", 190", 115", 245", 215", 255", 135", 165", 110", 140", 120", 160", 175", 230", 245", 135"
+LIST C = 190", 120", 135", 160", 110", 195", 115", 235", 205", 130", 135", 115", 165", 230", 260", 205", 140", 235", 235", 125", 190", 150", 160", 210", 205", 100", 180", 85"
+LIST D = 1, 0, 1, 1, 0, 0, 0, 1, 2, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 2, 1, 0, 0, 0, 1
+LIST E = 0, 1, 2, 1, 0, 1, 1, 0, 0, 1, 0, 0, 2, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0
+LIST F = 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 2, 0, 0, 1, 1, 1, 0, 0, 2, 1
+LIST Z = 11", 12", 13", 14"
+
+Dim W = 10
+Dim X = 2000
+
+DISKCOLUMNS = 1
+
+S.S.1,
+      S1,
+          .1": ON ^LLever, ^RLever ---> S2
+      S2,
+          #START: ON ^Fan, ^Houselight; Z24 ---> S3
+      S3, 
+          .1": LIST G = B(I); LIST H = E(M) ---> S4
+      S4,
+          G#T: ON ^Cue_LED; Z1 ---> S5
+      S5, 
+          10": OFF ^Cue_LED; IF H = 1 [@PLUS, @MINUS]
+               @PLUS: Z2; Z20; ADD J; Show 1, S1_Plus, J; SET X(w(0))=S; ADD w(0); Set X(w(0))= -987.987 ---> S3
+               @MINUS: ---> S6
+      S6,
+          .1": IF H = 2 [@NonPlus, @CSMinus]
+               @NonPlus: Z3; Z21; ADD K; Show 2, S1_Plus_NR, K; SET X(w(1))=S; ADD w(1); Set X(w(1))= -987.987 ---> S3
+               @CSMinus: Z4; Z18; ADD L; Show 3, S1_Minus, L; SET X(w(2))=S; ADD w(2); Set X(w(2))= -987.987 ---> S3
+
+S.S.2, \Reinforced CS+ (Flashing Right Panel Light)
+      S1,   \ If CS+, Issue Z10 to activate intermittent Light
+          #Z2: Z10 ---> S2
+      S2,   \ Wait 9.5", then begin to deliver pellets (Z11 and z26)
+          9.5":  Z11; Z26 ---> S3
+      S3,   \ 10" after start of CS+, issue z9 to kill light, return to S1
+          0.5": Z9 ---> S1
+
+
+S.S.3, \ Nonreinforced CS+ (Flashing Right Panel Light)
+      S1,   \ If CS+ (non), activate panel light
+          #Z3: Z10 ---> S2
+      S2,   \ Wait 10", then kill light
+          10": Z9 ---> S1
+
+
+S.S.4, \Intermittent Light generator
+      S1,
+          #Z10: ---> S2
+      S2, 
+          0.25": ON ^RPanelLight ---> S3
+          #z9: OFF ^RPanelLight ---> S1
+      S3, 
+          0.25": OFF ^RPanelLight ---> S2
+          #z9: ---> S1
+
+
+S.S.5, \ CS- Light
+      S1, 
+          #Z4: ON ^LPanelLight ---> S2
+      S2, 
+          10": OFF ^LPanelLight ---> S1
+
+S.S.6,  \Pellet Delivery
+      S1, 
+          #Z11: ON ^Pellet ---> S2
+      S2,
+          0.25": OFF ^Pellet ---> S3
+      S3, 
+          0.25": ON ^Pellet ---> S4
+      S4, 
+          0.25": OFF ^Pellet ---> S5
+      S5,
+          0.25": ON ^Pellet ---> S6
+      S6,
+          0.25": OFF ^Pellet ---> S1
+
+S.S.7,
+S1,
+       #START: ---> S2
+
+S2,    \ THIS IS DIRECTLY FROM MED. "Beam Break Defined - 20 ms Break, 20 ms Release.
+       \ Inputs in Level Mode generate an input "count" on each interrupt. 
+       \ With a 1ms system resolution 2 counts will be reached in 20ms. The Z22 pulse
+       \ is used to signal a complete Beam Break. The second statement resets the
+       \ counter every 20 ms so that a partial Beam Break of less than 20 ms will 
+       \ constitute a response.
+
+       #R^Foodcup: ADD Y; if Y >= 2 [@BeamBreak, @NoBeamBreak]
+              @BeamBreak: Z22; Set Y = 0 ---> S3
+              @NoBeamBreak: ---> SX
+S3,    \ As long as the Bream is broken, the second statement causes a re-entry to
+       \ this State. This resets the internal 20 ms timer so that it never times out.
+       \ When the beam is released for 20 ms, the time times out and a Z23 pulse
+       \ signals the release.
+
+       0.02": Z23 ---> S2
+       #R^Foodcup: ---> S3
+
+S.S.9, 
+\ Session timer. Returns timestamp S every 0.1"
+       S1,
+	  #START: ---> S2
+       S2, 
+	  .1": Set S = S + .1"; SHOW 5, Min, S/1' ---> SX
+
+S.S.10,
+\ Kill session after all cues delivered
+       S1,
+          1": IF (J+K+L)<41 [@Session, @Kill]
+             @Session: SHOW 4, TOTAL, J+K+L ---> SX
+             @Kill: ---> S2
+       S2, 
+          10": OFF ^Houselight, ^Fan; LOCKON ^LLever, ^RLever ---> STOPABORTFLUSH
+
+S.S.11,
+S1,
+     #Z17: ON ^TTL_S2TONE ---> S2
+S2,
+     0.001": OFF ^TTL_S2TONE ---> S1
+
+S.S.12,
+S1,
+     #Z18: ON ^TTL_S1SolidLight ---> S2
+S2,
+     0.001": OFF ^TTL_S1SolidLight ---> S1
+
+S.S.13,
+S1,
+     #Z19: ON ^TTL_S2NOISE ---> S2
+S2, 
+     0.001": OFF ^TTL_S2NOISE ---> S1
+
+S.S.14,
+S1, 
+     #Z20: ON ^TTL_S1FlashingLight ---> S2
+S2, 
+     0.001": OFF ^TTL_S1FlashingLight ---> S1
+
+
+S.S.15,
+S1,
+     #Z21: ON ^TTL_S1FlashingLightNR ---> S2
+S2,
+     0.001": OFF ^TTL_S1FlashingLightNR ---> S1
+
+S.S.16,
+S1, 
+     #Z22: ON ^TTL_FOODCUP_ENTRY; SET X(w(4))=S; ADD w(4); Set X(w(4))= -987.987 ---> S2
+S2, 
+     0.001": OFF ^TTL_FOODCUP_ENTRY ---> S1
+
+S.S.17,
+S1,
+     #Z23: ON ^TTL_FOODCUP_EXIT; SET X(w(5))=S; ADD w(5); Set X(w(5))= -987.987 ---> S2
+S2,
+     0.001": OFF ^TTL_FOODCUP_EXIT ---> S1
+
+S.S.18,
+S1,
+     #Z24: ON ^TTL_START ---> S2
+S2,
+     0.001": OFF ^TTL_START ---> S1
+
+S.S.19,
+S1,
+     #Z26: ON ^TTL_Pellet; SET X(w(3))=S; ADD w(3); Set X(w(3))= -987.987 ---> S2
+S2,
+     0.001": OFF ^TTL_Pellet ---> S1
+
+S.S.20,
+S1,
+        #Start: SET O = 800;           \ default freq = 1000 hz 
+                SET P = 90;             \ volume = 95 db
+                SET Q = 10;             \ rise\fall time = 10 ms
+                SET R = 10000;           \ duration = 10000 ms
+                ~InitANL926;~;        \ reset ANL-926
+                ~SetFreq(MG, BOX,O);~;      \ initialize frequency
+                ~SetAmp(MG, BOX,P);~;       \ initialize amplitude
+                ~SetRF(MG, BOX,Q);~;        \ initialize rise\fall time
+                ~SetDur(MG, BOX,R);~;       \ initialize duration
+                ~SETCLICKFREQ(MG,BOX,10);~;--->SX         \ SET CLICK FREQUENCY 
+
+
+

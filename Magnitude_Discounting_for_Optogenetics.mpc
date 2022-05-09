@@ -1,0 +1,194 @@
+\Opto Magnitude Discounting
+\Description: Lever press for either high magnitude stim (lever A) or low magnitude stim (lever B). Starting block of C forced  trials. Second block of D forced or choice trials. 
+\Created: 10/20/14
+\Last Updated:
+
+\Defined Constants
+^LLEVER = 1
+^RLEVER = 2
+^RCUE = 3
+^LCUE = 4
+^WHITE NOISE = 7
+^HOUSE LIGHT = 8
+^FAN = 10
+^LASER = 33
+
+\Variables
+\A = 
+\B =
+\C = 
+\D = 
+\E =
+\F =
+\G =
+\H =
+\I = ARRAY
+	\I(0)=NUMBER OF High Magnitude Lever Presses
+	\I(1)=NUMBER OF Low Magnitude Lever Presses
+	\I(2)=NUMBER OF Errors
+	\I(3)=NUMBER OF High Magnitude Trials
+	\I(4)=NUMBER OF Low Magnitude Trials
+	\I(5)=NUMBER OF Choice Trials
+\J =
+\K = 
+\L =
+\M =
+\N =
+\O =
+\P = Timestamps of High Magnitude Lever Presses
+\Q = Timestamps of Low Magnitude Lever Presses
+\R = Timestamps of Errors
+\S = Timestamps of High Magnitude Trials
+\T = Timer
+\U = Timestamps of Low Magnitude Trials
+\V = Timestamps of Choice Trials
+\W = Forced Block Second Random
+\X = Session Block Second Random
+\Y =
+\Z = NOWAIT
+
+\Set Variables
+VAR_ALIAS HIGH MAGNITUDE LEVER [1left-2right] = A
+VAR_ALIAS HIGH MAGNITUDE Duration = B
+VAR_ALIAS START FORCED BLOCK TRIALS [0none-divisibleby5] = C
+VAR_ALIAS SESSION TRIALS [divisibleby9] = D
+VAR_ALIAS LOW MAGNITUDE Duration = E
+
+\Dimension Variables
+
+DIM I = 6
+DIM P = 1000
+DIM Q = 1000
+DIM R = 1000
+DIM S = 1000
+DIM U = 1000
+DIM V = 1000
+
+DISKCOLUMNS = 1
+
+\List Variables
+LIST H = 20",22",24",26",28",32",34",36",38",40"
+LIST J = 1,1,2,2,3
+LIST L = 1,1,2,2,3,3,4,4,4
+LIST M = 20",20",22",24",26",26",28",30",32",34",34",36",38",40",40"
+LIST W = 1,2
+LIST X = 1,2,3
+
+S.S.1 \Start and Kill Session
+	S1,
+		0.001": SET Z = 0, A = 1, B = 20", C = 10, D = 90, E = 4", F = 0, G = 0, N = 0, O = 0, T = 0; LOCKOFF ^LLEVER, ^RLEVER; ON ^LLEVER, ^RLEVER, ^FAN, ^HOUSE LIGHT, ^WHITE NOISE---> S2
+	S2,
+		#Z7: ON ^LLEVER, ^RLEVER; LOCKON ^LLEVER, ^RLEVER; OFF ^FAN, ^HOUSE LIGHT, ^WHITE NOISE ---> STOPABORTFLUSH
+
+S.S.2 \Forced Block
+	S1,
+		#Start: IF C = 0 [@TRUE, @FALSE]
+			@TRUE: Z2 ---> SX
+			@FALSE: ---> S2
+	S2,
+		Z#T:ADD F; IF F <= C [@TRUE, @FALSE]
+			@TRUE: RANDD G = H, K = J; IF K = 3 [@TRUE, @FALSE]
+				@TRUE: RANDD K = W ---> S3
+				@FALSE: ---> S3
+			@FALSE: Z4 ---> S1
+	S3,
+		G#T:Z(K)---> S4
+	S4,
+		#Z5: ---> S2
+
+S.S.3 \Session Block
+	S1,
+		#Z4: ---> S2
+	S2,
+		Z#T:ADD N; IF N <= D [@TRUE, @FALSE]
+			@TRUE: RANDD G = M, K = L; IF K = 4 [@TRUE, @FALSE]
+				@TRUE: RANDD K = X ---> S3
+				@FALSE: ---> S3
+			@FALSE: Z7 ---> S1
+	S3,
+		G#T:Z(K)---> S4
+	S4,
+		#Z5: ---> S2
+
+S.S.4 \High Magnitude Trial
+	S1,
+		#Z1: IF A = 1 [@TRUE, @FALSE]
+				@TRUE: ON ^LCUE ---> S2
+				@FALSE: ON ^RCUE ---> S2
+	S2,
+		5": OFF ^LLEVER, ^RLEVER ---> S3
+	S3,
+		#R^LLEVER: IF A = 1 [@TRUE, @FALSE]
+				@TRUE: Z6; OFF ^RCUE, ^LCUE; ON ^LLEVER, ^RLEVER ---> S4
+				@FALSE: Z9; OFF ^RCUE, ^LCUE, ^HOUSE LIGHT; ON ^LLEVER, ^RLEVER ---> S4
+		#R^RLEVER: IF A = 2 [@TRUE, @FALSE]
+				@TRUE: Z6; OFF ^RCUE, ^LCUE; ON ^LLEVER, ^RLEVER ---> S4
+				@FALSE: Z9; OFF ^RCUE, ^LCUE, ^HOUSE LIGHT; ON ^LLEVER, ^RLEVER ---> S4
+		#Z5: OFF ^RCUE, ^LCUE; ON ^LLEVER, ^RLEVER ---> S1
+	S4,
+		#Z5: ON ^HOUSE LIGHT ---> S1
+
+S.S.5 \Low Magnitude Trial
+	S1,
+		#Z2: IF A = 2 [@TRUE, @FALSE]
+				@TRUE: ON ^LCUE ---> S2
+				@FALSE: ON ^RCUE ---> S2
+	S2,
+		5": OFF ^LLEVER, ^RLEVER ---> S3
+	S3,
+		#R^LLEVER: IF A = 2 [@TRUE, @FALSE]
+				@TRUE: Z8; OFF ^RCUE, ^LCUE; ON ^LLEVER, ^RLEVER ---> S4
+				@FALSE: Z9; OFF ^RCUE, ^LCUE, ^HOUSE LIGHT; ON ^LLEVER, ^RLEVER ---> S4
+		#R^RLEVER: IF A = 1 [@TRUE, @FALSE]
+				@TRUE: Z8; OFF ^RCUE, ^LCUE; ON ^LLEVER, ^RLEVER ---> S4
+				@FALSE: Z9; OFF ^RCUE, ^LCUE, ^HOUSE LIGHT; ON ^LLEVER, ^RLEVER ---> S4
+		#Z5: OFF ^RCUE, ^LCUE; ON ^LLEVER, ^RLEVER ---> S1
+	S4,
+		#Z5: ON ^HOUSE LIGHT ---> S1	
+
+S.S.6 \Choice Trial
+	S1,
+		#Z3: ON ^RCUE, ^LCUE ---> S2		 
+	S2,
+		5": OFF ^LLEVER, ^RLEVER ---> S3
+	S3,
+		#R^LLEVER: IF A = 1 [@TRUE, @FALSE]
+				@TRUE: Z6; OFF ^RCUE, ^LCUE; ON ^LLEVER, ^RLEVER ---> S4
+				@FALSE: Z8; OFF ^RCUE, ^LCUE; ON ^LLEVER, ^RLEVER ---> S4
+		#R^RLEVER: IF A = 1 [@TRUE, @FALSE]
+				@TRUE: Z8; OFF ^RCUE, ^LCUE; ON ^LLEVER, ^RLEVER ---> S4
+				@FALSE: Z6; OFF ^RCUE, ^LCUE; ON ^LLEVER, ^RLEVER ---> S4
+		#Z5: OFF ^RCUE, ^LCUE; ON ^LLEVER, ^RLEVER ---> S1
+	S4,
+		#Z5: ---> S1	
+
+S.S.7 \Trial Timer
+	S1,
+		#Z1 ! #Z2 ! #Z3: ---> S2
+	S2,
+		25": Z5 ---> S1
+
+S.S.8 \Reward
+	S1,
+		#Z8: ON ^LASER ---> S2
+		#Z6: ON ^LASER ---> S3
+	S2,
+		E#T: OFF ^Laser ---> S1
+	S3,
+		B#T: OFF ^Laser ---> S1
+S.S.9 \Timer
+	S1,
+		#START: --->S2
+	S2,
+		.001": SET T = T + .001; ---> SX
+
+S.S.10 \Record Timestamps
+	S1, 
+		#Z6: SET P(I(0)) = T; ADD I(0); SET P(I(0)) = -987.987; SHOW 1, HI PRESSES, I(0) --->SX
+		#Z8: SET Q(I(1)) = T; ADD I(1); SET Q(I(1)) = -987.987; SHOW 2, LO PRESSES, I(1) --->SX
+		#Z9: SET R(I(2)) = T; ADD I(2); SET R(I(2)) = -987.987; SHOW 3, ERRORS, I(2)--->SX
+		#Z1: SET S(I(3)) = T; ADD I(3); SET S(I(3)) = -987.987; SHOW 4, HI TRIALS, I(3)--->SX
+		#Z2: SET U(I(4)) = T; ADD I(4); SET U(I(4)) = -987.987; SHOW 5, LO TRIALS, I(4)--->SX	
+		#Z3: SET V(I(5)) = T; ADD I(5); SET V(I(5)) = -987.987; SHOW 6, CHOICE TRIALS, I(5)--->SX
+
+		

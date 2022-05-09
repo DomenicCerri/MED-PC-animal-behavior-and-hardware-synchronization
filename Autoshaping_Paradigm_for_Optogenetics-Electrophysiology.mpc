@@ -1,0 +1,247 @@
+\ AUTOSHAPING for OPTO (CHECK NAMED VARIABLES!!!, lasers set to TTL+)
+\ Description: Laser off = 60 cues (30 CS+(X Lever), 30 CS-(Y Lever)); CS+ coterminates with 1 pellet. Laser on = 90 cues (45 CS+(X Lever), 45 CS-(Y Lever)); Laser on trials 31-60; CS+ coterminates with 1 pellet. Extinction only applies to Laser on trials.
+\ Created: 8/30/13
+\ Last Updated: 4/14/13
+\ Author: Domenic Cerri
+
+\Inputs
+^LLever=1
+^RLever=2
+^Foodcup=5
+
+\Outputs
+^Houselight=8
+^Fan=10
+^Pellet=11
+^Laser=33
+
+^TTL_CSPLUSNOLASER=17
+^TTL_CSMINUSNOLASER=18
+^TTL_CSPLUSLASER=19
+^TTL_CSMINUSLASER=20
+^TTL_FOODCUP_ENTRY=21
+^TTL_FOODCUP_EXIT=22
+^TTL_CS+PRESS=23
+^TTL_CS-PRESS=24
+
+
+\Variables
+\ A = CS+ ITIs
+\ B = CS- ITIs
+\ C = Trial Type
+\ D = 3rd Trial Type
+\ E = Current ITI
+\ F = 
+\ G = Current Trial Type
+\ H = Total Trials
+\ I = Current Trials
+\ J = 
+\ K = 
+\ L = 
+\ M = 
+\ N = Session Time
+\ O = CS+ Presses
+\ P = CS- Presses
+\ Q = 
+\ R = 
+\ S = NOWAIT
+\ T = 
+\ U = Extinction?
+\ V = LASER ALL TRIALS?
+\ W = 
+\ X = CS+ Lever
+\ Y = CS- Lever
+\ Z = Temp Counter for FC entries/exits
+
+\Zpulses:
+\Z1  - CS+ No Laser Trial Start
+\Z2  - CS- No Laser Trial Start
+\Z3  - CS+ Laser Trial Start
+\Z4  - CS- Laser Trial Start
+\Z5  - Next Trial
+\Z6  - Pellet
+\Z7  - No Pellet
+\Z8  - 
+\Z9  - 
+\Z10 - 
+\Z11 - 
+\Z12 - 
+\Z13 - 
+\Z14 - 
+\Z15 - 
+\Z16 - 
+\Z17 - CS+
+\Z18 - CS-
+\Z19 - CS+ LASER
+\Z20 - CS- LASER
+\Z21 - HEAD ENTRY
+\Z22 - HEAD EXIT
+\Z23 - CS+ PRESS
+\Z24 - CS- PRESS
+\Z25 - 
+\Z26 - 
+\Z27 - 
+\Z28 - 
+\Z29 - 
+\Z30 - 
+
+LIST A = 45", 46", 47", 48", 49", 50", 51", 52", 53", 54", 55", 56", 57", 58", 59", 61", 62", 63", 64", 65", 66", 67", 68", 69", 70", 71", 72", 73", 74", 75" 
+LIST B = 45", 46", 47", 48", 49", 50", 51", 52", 53", 54", 55", 56", 57", 58", 59", 61", 62", 63", 64", 65", 66", 67", 68", 69", 70", 71", 72", 73", 74", 75" 
+LIST C = 1, 2, 3
+LIST D = 1, 2
+
+VAR_ALIAS CSPLUSLEV[1left-2right] = X
+VAR_ALIAS Extinction[0no-1yes] = U
+VAR_ALIAS LASERTRIALS[0off-1on] = V
+
+
+S.S.1, \Start and Kill session
+	S1,
+		.1": LOCKOFF ^LLEVER, ^RLEVER, ^Laser; ON ^LLEVER, ^RLEVER, ^Laser; SET H = 60, I = 0, O = 0, P = 0, S = 0", U = 0, V = 0, X = 1 ---> S2
+	S2,
+		#START: ON ^Houselight, ^Fan ---> S3
+	S3,
+		S#T: IF V = 0 [@Train, @Test]
+			@Train: Set H=60 ---> S4
+			@Test: Set H=90 ---> S4
+	S4,
+		S#T: IF X = 1 [@CS+L, @CS+R]
+			@CS+L: Set Y=2; Z5 ---> S5
+			@CS+R: Set Y=1; Z5 ---> S5
+	S5,
+		1": IF I>H [@Kill, @Session]
+			@Kill: ---> S6
+			@Session: ---> Sx
+       	S6, 
+		10": OFF ^Houselight, ^Fan; ON ^LLEVER, ^RLEVER, ^Laser; LOCKON ^LLEVER, ^RLEVER, ^Laser---> STOPABORTFLUSH
+
+S.S.2, \SET ITI AND TRIAL TYPE
+	S1, 
+		#Z5: ADD I; RANDD G = C --->S2
+	S2,
+		S#T: IF G = 3 [@TRUE, @FALSE]
+			@TRUE: RANDD G = D ---> S3
+			@FALSE: --->S3
+	S3,
+		S#T: IF V = 0	[@TRUE, @FALSE]	
+			@TRUE: ---> S4
+			@FALSE: IF (I>30) AND (I<=60) [@TRUE, @FALSE]
+				@TRUE: SET G = G + 2 ---> S4
+				@FALSE: ---> S4
+
+	s4,
+		S#T: Z(G) ---> S1
+
+S.S.3, \CS+ No Laser Trial
+	S1,
+		#Z1: RANDD E = A --->S2
+	S2,
+		E#T: OFF X; Z17 --->S3
+	S3,
+		10": ON X; Z6; Z5 --->S1 	
+
+S.S.4, \CS- No Laser Trial
+	S1,
+		#Z2: RANDD E = B --->S2
+	S2,
+		E#T: OFF Y; Z18 --->S3
+	S3,
+		10": ON Y; Z5 --->S1 
+
+S.S.5, \CS+ Laser Trial
+	S1,
+		#Z3: RANDD E = A --->S2
+	S2,
+		E#T: OFF X; Z19 --->S3
+	S3,
+		10": ON X; Z(U+6); Z5 --->S1 
+
+S.S.6, \CS- Laser Trial
+	S1,
+		#Z4: RANDD E = B --->S2
+	S2,
+		E#T: OFF Y; Z20 --->S3
+	S3,
+		10": ON Y; Z5 --->S1 
+
+S.S.7, \1 Pellet
+	S1,
+		#Z6: ON ^PELLET --->S2
+		#Z7: --->Sx
+	S2,
+		.25": OFF ^PELLET--->S1
+S.S.8, \Laser
+	S1,
+		#Z19: OFF ^Laser --->S2
+		#Z20: OFF ^Laser --->S2
+	S2,
+		10": ON ^Laser ---> S1		
+		
+S.S.9, \Beam Breaks
+	S1,
+		#START: ---> S2
+
+	S2,
+		#R^Foodcup: ADD Z; if Z >= 2 [@BeamBreak, @NoBeamBreak]
+			@BeamBreak: Z21; Set Z = 0 ---> S3
+			@NoBeamBreak: ---> SX
+	S3,
+	        0.02": Z22 ---> S2
+        	#R^Foodcup: ---> S3
+
+S.S.10, \Lever Presses
+	S1,
+		#RX: Z23; ADD O ---> SX
+		#RY: Z24; ADD P ---> SX
+
+S.S.11, \Session timer
+	S1,
+		#START: ---> S2
+	S2, 
+		.1": Set N = N + .1" ---> SX
+
+S.S.12, \Display 
+	S1,
+		1": SHOW 1, CS+PRESS, O; SHOW 2, CS-PRESS, P; SHOW 3, TRIAL, I; SHOW 4, Min, N/1'--->SX
+	
+	\TTLS
+S.S.13, 
+	S1,
+		#Z17: ON 17 ---> S2
+	S2,
+		0.001": OFF 17 ---> S1
+S.S.14, 
+	S1,
+		#Z18: ON 18 ---> S2
+	S2,
+		0.001": OFF 18 ---> S1
+S.S.15, 
+	S1,
+		#Z19: ON 19 ---> S2
+	S2,
+		0.001": OFF 19 ---> S1
+S.S.16, 
+	S1,
+		#Z20: ON 20 ---> S2
+	S2,
+		0.001": OFF 20 ---> S1
+S.S.17, 
+	S1,
+		#Z21: ON 21 ---> S2
+	S2,
+		0.001": OFF 21 ---> S1
+S.S.18, 
+	S1,
+		#Z22: ON 22 ---> S2
+	S2,
+		0.001": OFF 22 ---> S1
+S.S.19, 
+	S1,
+		#Z23: ON 23 ---> S2
+	S2,
+		0.001": OFF 23 ---> S1
+S.S.20, 
+	S1,
+		#Z24: ON 24 ---> S2
+	S2,
+		0.001": OFF 24 ---> S1

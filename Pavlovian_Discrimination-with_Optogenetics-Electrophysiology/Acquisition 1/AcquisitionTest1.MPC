@@ -1,0 +1,225 @@
+\ FOC Acquisition 1 TEST 1
+\ Description: 84 cues (42 CS+(Tone), 42 CS-(Noise); CS+ coterminates with 1 pellet; Laser Stim on Trials 49-84
+\ Created: 5/15/12
+\ Last Updated: 
+\ Author: Domenic Cerri
+
+\Inputs
+^Foodcup=5
+
+\Outputs
+^Tone=6
+^Noise=7
+^Houselight=8
+^Fan=10
+^Pellet=11
+^TTL_CSPLUS=17
+^TTL_CSMINUS=18
+^TTL_CSPLUSLASER=19
+^TTL_CSPLUSNOLASER=20
+^TTL_CSMINUSLASER=21
+^TTL_CSMINUSNOLASER=22
+^TTL_PELLET=23
+^TTL_NOPELLET=24
+^TTL_FOODCUP_ENTRY=25
+^TTL_FOODCUP_EXIT=26
+^LASER=33
+
+\Variables
+\ A = Possible ITIs
+\ B = Possible trial type
+\ C = Possible 3rd trial type
+\ D = Possible CS+ laser
+\ E = Possible CS- laser
+\ F = Current ITI
+\ G = Current Trial Type
+\ H = Total Trials
+\ I = Current Trial
+\ J = CS+ Total Counter
+\ K = CS- Total Counter
+\ L = CS+ LASER Counter
+\ M = CS- LASER Counter
+\ N = Session Timer
+\ O = Current Laser
+\ P = 
+\ Q = 
+\ R = 
+\ S = 
+\ T = 
+\ U = 
+\ V = 
+\ W = 
+\ X = 
+\ Y = Temp Counter for FC entries/exits
+\ Z = 
+
+\Zpulses:
+\Z1  - CS+ Trial 
+\Z2  - CS- Trial 
+\Z3  - CS+ LASER 
+\Z4  - CS+ NO LASER 
+\Z5  - CS- LASER 
+\Z6  - CS- NO LASER 
+\Z7  - Pellet
+\Z8  - NO Pellet
+\Z9  - Foodcup Entry
+\Z10 - Foodcup Exit
+\Z11 - Next Trial
+\Z12 - 
+\Z13 - 
+\Z14 - 
+\Z15 - 
+\Z16 - 
+\Z17 - 
+\Z18 - 
+\Z19 - 
+\Z20 - 
+\Z21 - 
+\Z22 - 
+\Z23 - 
+\Z24 - 
+\Z25 - 
+\Z26 - 
+\Z27 - 
+\Z28 - 
+\Z29 - 
+\Z30 - 
+
+LIST A = 30", 35", 40", 45", 50", 55", 60", 65", 70", 75", 80", 85", 90", 30", 35", 40", 45", 50", 55", 60", 65", 70", 75", 80", 85", 90", 30", 35", 40", 45", 50", 55", 60", 65", 70", 75", 80", 85", 90", 30", 60", 90"
+LIST B = 1, 2, 3
+LIST C = 1, 2
+LIST D = 3, 4, 3, 4
+LIST E = 5, 6, 5, 6
+
+S.S.1, \Start and Kill session
+	S1,
+		.1": ON 1, 2; LOCKON 1, 2 ---> S2
+	S2,
+		#START: ON 10, 8; SET H = 84; Z11 ---> S3
+	S3,
+		1": IF I>H [@Kill, @Session]
+			@Kill: ---> S4
+			@Session: ---> Sx
+       	S4, 
+		10": OFF 10, 8 ---> STOPABORTFLUSH
+
+S.S.2, \SET ITI AND TRIAL TYPE
+	S1, 
+		#Z11: ADD I; RANDD F = A; RANDD G = B --->S2
+	S2,
+		.001": IF G = 3 [@TRUE, @FALSE]
+			@TRUE: RANDD G = C ---> S3
+			@FALSE: --->S3	
+	S3,
+		.001": IF G = 1 [@TRUE, @FALSE]
+			@TRUE: ---> S4
+			@FALSE: ---> S5	
+	S4,
+		.001": IF I >= 49 [@TRUE, @FALSE]
+			@TRUE: SET O = 3 ---> S6
+			@FALSE: SET O = 4 ---> S6
+	S5,
+		.001": IF I >= 49 [@TRUE, @FALSE]
+			@TRUE: SET O = 5 ---> S6
+			@FALSE: SET O = 6 ---> S6
+	S6,
+		F#T: Z(O) ---> S7
+	S7,
+		.2": Z(G) ---> S1
+
+S.S.3, \CS+ Trial
+	S1,
+		#Z1: ON 6; ADD J; Show 1, CS_PLUS, J --->S2
+	S2,
+		10": OFF 6; Z7; Z11 --->S1 	
+
+S.S.4, \CS- Trial
+	S1,
+		#Z2: ON 7; ADD K; Show 3, CS_Minus, K --->S2
+	S2,
+		10": OFF 7; Z8; Z11 --->S1 
+
+S.S.5, \1 Pellet
+	S1,
+		#Z7: ON 11 --->S2
+	S2,
+		.25": OFF 11 --->S1
+		
+S.S.6, \Beam Breaks
+	S1,
+		#START: ---> S2
+
+	S2,
+		#R^Foodcup: ADD Y; if Y >= 2 [@BeamBreak, @NoBeamBreak]
+			@BeamBreak: Z9; Set Y = 0 ---> S3
+			@NoBeamBreak: ---> SX
+	S3,
+	        0.02": Z10 ---> S2
+        	#R^Foodcup: ---> S3
+
+S.S.7, \Session timer
+	S1,
+		#START: ---> S2
+	S2, 
+		.1": Set N = N + .1"; SHOW 5, Min, N/1' ---> SX
+
+S.S.8, \LASER
+	S1,
+		#Z3: ON 33; ADD L; Show 2, PLUS_LASER, L ---> S2
+		#Z4: ---> SX
+		#Z5: ON 33; ADD M; Show 4, MINUS_LASER, M ---> S2
+		#z6: ---> Sx
+	S2,
+		10.4": OFF 33 ---> S1
+
+	\TTLS
+S.S.9, 
+	S1,
+		#Z1: ON 17 ---> S2
+	S2,
+		0.001": OFF 17 ---> S1
+S.S.10, 
+	S1,
+		#Z2: ON 18 ---> S2
+	S2,
+		0.001": OFF 18 ---> S1
+S.S.11, 
+	S1,
+		#Z3: ON 19 ---> S2
+	S2,
+		0.001": OFF 19 ---> S1
+S.S.12, 
+	S1,
+		#Z4: ON 20 ---> S2
+	S2,
+		0.001": OFF 20 ---> S1
+S.S.13, 
+	S1,
+		#Z5: ON 21 ---> S2
+	S2,
+		0.001": OFF 21 ---> S1
+S.S.14, 
+	S1,
+		#Z6: ON 22 ---> S2
+	S2,
+		0.001": OFF 22 ---> S1
+S.S.15, 
+	S1,
+		#Z7: ON 23 ---> S2
+	S2,
+		0.001": OFF 23 ---> S1
+S.S.16, 
+	S1,
+		#Z8: ON 24 ---> S2
+	S2,
+		0.001": OFF 24 ---> S1
+S.S.17, 
+	S1,
+		#Z9: ON 25 ---> S2
+	S2,
+		0.001": OFF 25 ---> S1
+S.S.18, 
+	S1,
+		#Z10: ON 26 ---> S2
+	S2,
+		0.001": OFF 26 ---> S1

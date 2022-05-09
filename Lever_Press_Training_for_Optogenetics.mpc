@@ -1,0 +1,58 @@
+\Defined Constants
+^LLEVER = 1
+^RLEVER = 2
+^FAN = 10
+^LASER = 33
+
+\Variables
+\B = Timestamp: Left Presses
+\C = Timestamp: Right Presses
+\D = Count: Left Presses
+\E = Count: Right Presses
+\T = Millisecond timer
+\U = Session Timer
+
+DIM B = 1000
+DIM C = 1000
+
+DISKCOLUMNS = 1
+
+\Z Pulses
+\Z1 = Left Press
+\Z2 = Right Press
+
+S.S.1, \Continuous Reinforcement	
+	S1,
+		0.001": LOCKOFF ^LLEVER, ^RLEVER; ON ^LLEVER, ^RLEVER, ^FAN; SET D = 0, E = 0 ---> S2
+	S2,	
+		#START: OFF ^LLEVER, ^RLEVER ---> S3
+	S3,
+		#R^LLEVER: Z1; ON ^LLEVER, ^RLEVER, ^LASER ---> S4
+		#R^RLEVER: Z2; ON ^LLEVER, ^RLEVER, ^LASER ---> S4
+	S4,
+		5": OFF ^LASER; IF D < 25 [@TRUE, @FALSE]
+			@TRUE: IF E < 25 [@TRUE, @FALSE]
+				@TRUE: OFF ^LLEVER, ^RLEVER ---> S3
+				@FALSE: OFF ^LLEVER  ---> S3
+			@FALSE: IF E < 25 [@TRUE, @FALSE]
+				@TRUE: OFF ^RLEVER ---> S3
+				@FALSE: LOCKON ^LLEVER, ^RLEVER; OFF ^FAN ---> STOPABORTFLUSH
+
+S.S.2, \Timer
+	S1,
+		#START: SET T = 0 --->S2
+	S2,
+		.001": SET T = T + .001; ---> SX
+
+S.S.3, \Timestamps
+	S1,
+		#Z1: SET B(D) = T; ADD D; SET B(D) = -987.987; SHOW 1, LEFT PRESSES, D --->SX
+		#Z2: SET C(E) = T; ADD E; SET C(E) = -987.987; SHOW 2, RIGHT PRESSES, E --->SX
+
+S.S.4, \Time Remaining
+	S1,
+		#START: SET U = 1800" ---> S2
+	S2,
+		1": SET U = U - 1"; SHOW 3, TIME REMAINING, U/60"; IF U > 0 [@TRUE, @FALSE]
+			@TRUE: ---> SX  
+			@FALSE: ON ^LLEVER, ^RLEVER; OFF ^FAN; LOCKON ^LLEVER, ^RLEVER---> STOPABORTFLUSH

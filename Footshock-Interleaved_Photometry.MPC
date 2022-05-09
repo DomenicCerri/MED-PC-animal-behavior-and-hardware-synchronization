@@ -1,0 +1,99 @@
+\Pseudorandomly timed footshocks for photometry with optional interleaving
+
+\Created: 1/8/2020
+\Last Updated: 1/8/2020
+
+\Defined Constants
+^SPECT = 17
+^PURPLE = 18
+^BLUE = 19
+^VIDEO = 32
+
+\Variables
+\A = Photometry Frequency
+\B = Photometry Trigger Counter
+\C = Total Session Time
+\D = Current Seconds
+\E = Triggers/Second
+\F = Total photometry triggers/session
+\G = Total footshocks per session
+\H = Photometry triggers per equally spaced footshock triggers
+\I = Footshock trigger count multiplier
+\J = List of multipliers
+\K = Triggers to next footshock
+\L = Triggers since last footshock
+\M = Footshock duration
+\N = Timestamp Array: Footshocks
+\O = N array position
+\P = Footshock Output
+\Q = Synchronization type
+\R = Cue Duration
+\S = Cue Output
+
+\Set Variables
+VAR_ALIAS Spectrometer Freq [ms] = A
+VAR_ALIAS Session Time [s] = C
+VAR_ALIAS Total Footshocks = G
+VAR_ALIAS Footshock Duration [ms] = M
+VAR_ALIAS Footshock Output = P
+VAR_ALIAS Synchronization [0freq1start] = Q
+VAR_ALIAS Cue Duration [ms] = R
+VAR_ALIAS Cue Output = S
+
+\Dimension Variables
+DIM N = 1000
+
+\Z Pulses
+\Z1 = Trigger at Frequency
+\Z2 = End Session
+\Z3 = Footshock and Cue OFF
+
+LIST J =  0.5, 0.6, 0.7, 0.8, 0.9, 1.1, 1.2, 1.3, 1.4, 1.5
+S.S.1, \Setup Start and Finish
+    S1,
+        0.001": SET A = 100, B = 0, C = 900, G = 15, I = 10, L = 0, M = 2000, P = 9, Q = 0, R = 3000, S = 6; LOCKOFF ^PURPLE, ^BLUE, ^VIDEO, P, ^SPECT; ON ^PURPLE, ^BLUE, ^VIDEO, ^SPECT; OFF P, S ---> S2
+    S2,
+        #START: SET E = 1000/A, F = E*C, H = F/G; RANDD I = J; SET K = H*I ---> S3
+    S3,
+        A#T: ADD B; SET D = B/E; IF D<=C [@TRUE, @FALSE]
+            @TRUE: Z1 --->SX
+            @FALSE: Z2; ON ^BLUE, ^PURPLE, ^VIDEO, ^SPECT; OFF P, S; LOCKON ^PURPLE, ^BLUE, ^VIDEO, ^SPECT--->STOPABORTFLUSH
+
+S.S.2,     \Laser Interleaving
+    S1,
+        #Z1: ON ^BLUE; OFF ^PURPLE ---> S2
+        #Z2: ---> S3
+    S2,
+        #Z1: ON ^PURPLE; OFF ^BLUE --->S1
+        #Z2: ---> S3
+    S3,
+        0.001":--->SX
+
+S.S.3, \Spectrometer and Video Trigger
+    S1,
+        #Z1: OFF ^SPECT, ^VIDEO; IF Q > 0 [@TRUE, @FALSE]
+            @TRUE: --->S3
+            @FALSE: --->S2
+    S2,
+        0.01": ON ^SPECT, ^VIDEO --->S1
+    S3,
+        #Z2: ON ^VIDEO, ^SPECT ---> SX
+
+S.S.4, \Footshock and Cue Trigger
+    S1,
+        #Z1: ADD L; IF L>=K [@TRUE, @FALSE]
+            @TRUE: ON P; Z3; RANDD I = J; SET K = H*I, L = 0 ---> SX
+            @FALSE: IF L>=K-(R/A) [@TRUE, @FALSE]
+        @TRUE: ON S --->SX
+        @FALSE: ---> SX
+
+S.S.5, \Footshock and Cue Trigger Off
+    S1,
+        #Z3: ---> S2
+    S2,
+        M#T: OFF P, S ---> S1
+
+S.S.6, \Timestamps
+    S1,
+        #Z3: SET N(O) = D; ADD O; SET N(O) = -987.987; SHOW 1, Footshocks, O ---> SX
+        #Z1: SHOW 2, Next Shock, ((K-L)/E); SHOW 3, Time Remaining, C-D; SHOW 4, SPEC TRIGS, B ---> SX
