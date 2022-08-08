@@ -1,0 +1,89 @@
+\Block Design Sine Wave Auditory Stimulation for fMRI
+
+\Created: 08/07/2022
+\Original Author: Domenic Cerri
+
+\Dimension Variables
+DIM L = 7
+DIM M = 5
+DIM V = 99999 \MRI Trigger Timestamps
+DIM W = 999 \OFF Block Timestamps
+DIM X = 99999 \Tone Timestamps
+DIM Y =	999 \ON Block Timestamps
+DIM Z = 3
+
+DISKCOLUMNS = 1 
+
+\Set Variables
+
+VAR_ALIAS MRI TTL Trigger = A
+VAR_ALIAS MRI Volume TR [ms]= B
+VAR_ALIAS Time to First Tone [s] = C
+VAR_ALIAS Stimulation Blocks = D
+VAR_ALIAS Tone On Duration [ms] = E
+VAR_ALIAS Tone Off Duration [ms] = F
+VAR_ALIAS Tones per Block = G
+VAR_ALIAS OFF Block Duration [s] = H
+VAR_ALIAS Tone Start Pitch [hz] = I
+VAR_ALIAS Tone Amplitude [db] = J
+VAR_ALIAS Tone Rise time [ms] = K
+VAR_ALIAS Tone Steps = N
+VAR_ALIAS Tone Magnitude [hz] = O
+
+S.S.1, \Setup and Start
+	S1,
+		0.001": SET A = 20, B = 3000, C = 20, D = 10, E = 500, F = 1500, G = 5, H = 30, I = 6000, J = 80, K = 10, N = 100, O = I/2 ---> S2
+	S2,
+		#START: ~SetRack(MG, 1);~; \ The ANL-926 cards are in Rack 1
+                		~InitANL926;~; \ Reset ANL-926
+                		~SetAmp(MG, BOX, J);~; \ Initialize Amplitude
+                		~SetRF(MG, BOX, K);~; \ Initialize Rise\Fall Time
+                		~SetDur(MG, BOX, E);~; \ Initialize Duration
+			SET L(0) = C * 1000, L(1) = H * 1000, L(2) = F+E, L(3) = (L(1)*D) + ((L(2)*G)*D) + L(0), L(4) = L(3)/B, L(7) = E/N; SHOW 5, Total Reps ROUNDUP, L(4); SHOW 3, Total Seconds ROUNDUP, L(3) ---> S3
+	S3,
+		L(0)#T: SET M(0) = 0,  M(1) = 0; Z1 ---> S2
+
+S.S.2, \Tone Blocks
+	S1,
+		#Z1: Z4; ADD M(0), M(1); SET X(Z(1)) = T; ADD Z(1); SET X(Z(1)) = -987.987; SET Y(Z(0)) = T; ADD Z(0); SET Y(Z(0)) = -987.987; SHOW 1, Stimulation Blocks, M(0) ---> S2
+	S2,
+		L(2)#T: IF M(1) < G [@TRUE, @FALSE]
+			@TRUE: Z4; ADD M(1); SET X(Z(1)) = T; ADD Z(1); SET X(Z(1)) = -987.987 ---> SX
+			@FALSE: Z2; SET M(1) = 0; SET W(Z(2)) = T; ADD Z(2); SET W(Z(2)) = -987.987 ---> S1
+
+S.S.3, \OFF Blocks and End Condition
+	S1,
+		#Z2: ---> S2
+	S2,
+		L(1)#T: IF M(0) < D [@TRUE, @FALSE]
+			@TRUE: Z1 ---> S1
+			@FALSE: SET M(2) = 1 ---> SX
+
+S.S.4, \MRI Trigger ON and End
+	S1,
+		#START: ON A; Z3 ---> S2
+	S2,
+		B#T: IF M(2) = 1 [@TRUE, @FALSE]
+			@TRUE: ---> STOPABORTFLUSH
+			@FALSE: ON A; Z3 ---> SX
+
+S.S.5, \MRI Trigger OFF
+	S1,
+		#Z3: ADD L(5); SET V(Z(3)) = T; ADD Z(3); SET V(Z(3)) = -987.987; SHOW 4, MRI Reps, L(5)---> S2
+	S2,
+		0.01": OFF A ---> S1
+
+S.S.6, \Timer
+	#Start: SET T = 0 ---> S2
+	0.01": SET T = T + 0.01, L(6) = T*100; SHOW 2, Seconds, L(6) ---> SX
+
+S.S.7, \Sine Wave Tone Generator
+	S1,
+		#Z4: ~SetRF(MG, BOX, K);~; ~SetDur(MG, BOX, E);~; SET M(4) = I, M(5) = 0; ~OnFreq(MG, BOX, M(4));~; ADD M(3) ---> S2
+	S2,
+		L(7)#T: ~SetRF(MG, BOX, 1);~; SET M(5) = M(5) + (0.5 / N), M(4) = 20.785 * (M(5) - 0) * (M(5) - 0.5) * (M(5) - 1); IF M(3) < N [@TRUE, @FALSE]
+			@TRUE: ~OnFreq(MG, BOX, (I + (M(4) * O));~; ADD M(3) ---> SX
+			@FALSE: ~SetDur(MG, BOX, L(7));~; ~OnFreq(MG, BOX, (I + (M(4) * O));~; SET M(3) = 0 ---> S1
+
+
+
