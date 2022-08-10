@@ -74,18 +74,20 @@ S.S.5, \MRI Trigger OFF
 		0.01": OFF A ---> S1
 
 S.S.6, \Timer
-	#Start: SET T = 0 ---> S2
-	0.01": SET T = T + 0.01, L(6) = T*100; SHOW 2, Seconds, L(6) ---> SX
+	S1,
+		#Start: SET T = 0 ---> S2
+	S2,
+		0.01": SET T = T + 0.01, L(6) = T*100; SHOW 2, Seconds, L(6) ---> SX
 
 S.S.7, \Triangle Wave Tone Generator
 	S1,
-		#Z4: ~SetRF(MG, BOX, K);~; ~SetDur(MG, BOX, E);~; SET M(4) = I; ~OnFreq(MG, BOX, I);~; ADD M(3) ---> S2
+		#Z4: SET M(4) = I; ADD M(3); ~SetRF(MG, BOX, K);~; ~SetDur(MG, BOX, E);~; ~OnFreq(MG, BOX, I);~; ---> S2
 	S2,
 		L(7)#T: ~SetRF(MG, BOX, 1);~; IF M(3) < N [@TRUE, @FALSE]
 			@TRUE: IF M(3) < N/2 [@TRUE, @FALSE]
-				@TRUE: SET M(4) = M(4) + O; ~OnFreq(MG, BOX, M(4));~; ADD M(3) ---> SX
-				@FALSE: SET M(4) = M(4) - O; ~OnFreq(MG, BOX, M(4));~; ADD M(3) ---> SX
-			@FALSE: ~SetDur(MG, BOX, L(7));~; SET M(4) = M(4) - O, M(3) = 0; ~OnFreq(MG, BOX, M(4));~; ---> S1
+				@TRUE: SET M(4) = M(4) + O, P = M(4); ADD M(3); ~OnFreq(MG, BOX, P);~; ---> SX
+				@FALSE: SET M(4) = M(4) - O, P = M(4); ADD M(3); ~OnFreq(MG, BOX, P);~; ---> SX
+			@FALSE: SET M(4) = M(4) - O, M(3) = 0, P = M(4), Q = L(7); ~SetDur(MG, BOX, Q);~; ~OnFreq(MG, BOX, P);~; ---> S1
 
 
 

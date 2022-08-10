@@ -69,21 +69,23 @@ S.S.4, \MRI Trigger ON and End
 
 S.S.5, \MRI Trigger OFF
 	S1,
-		#Z3: ADD L(5); SET V(Z(3)) = T; ADD Z(3); SET V(Z(3)) = -987.987; SHOW 4, MRI Reps, L(5)---> S2
+		#Z3: ADD L(5); SET V(Z(3)) = T; ADD Z(3); SET V(Z(3)) = -987.987; SHOW 4, MRI Reps, L(5) ---> S2
 	S2,
 		0.01": OFF A ---> S1
 
 S.S.6, \Timer
-	#Start: SET T = 0 ---> S2
-	0.01": SET T = T + 0.01, L(6) = T*100; SHOW 2, Seconds, L(6) ---> SX
+	S1,
+		#Start: SET T = 0 ---> S2
+	S2,
+		0.01": SET T = T + 0.01, L(6) = T*100; SHOW 2, Seconds, L(6) ---> SX
 
 S.S.7, \Sine Wave Tone Generator
 	S1,
-		#Z4: ~SetRF(MG, BOX, K);~; ~SetDur(MG, BOX, E);~; SET M(4) = I, M(5) = 0; ~OnFreq(MG, BOX, M(4));~; ADD M(3) ---> S2
+		#Z4: SET M(4) = I, M(5) = 0, P = M(4); ADD M(3); ~SetRF(MG, BOX, K);~; ~SetDur(MG, BOX, E);~; ~OnFreq(MG, BOX, P);~; ---> S2
 	S2,
-		L(7)#T: ~SetRF(MG, BOX, 1);~; SET M(5) = M(5) + (0.5 / N), M(4) = 20.785 * (M(5) - 0) * (M(5) - 0.5) * (M(5) - 1); IF M(3) < N [@TRUE, @FALSE]
-			@TRUE: ~OnFreq(MG, BOX, (I + (M(4) * O));~; ADD M(3) ---> SX
-			@FALSE: ~SetDur(MG, BOX, L(7));~; ~OnFreq(MG, BOX, (I + (M(4) * O));~; SET M(3) = 0 ---> S1
+		L(7)#T: SET M(5) = M(5) + (0.5 / N), M(4) = 20.785 * (M(5) - 0) * (M(5) - 0.5) * (M(5) - 1); ~SetRF(MG, BOX, 1);~; IF M(3) < N [@TRUE, @FALSE]
+			@TRUE: SET Q = I + (M(4) * O); ADD M(3); ~OnFreq(MG, BOX, Q);~;	---> SX
+			@FALSE: SET Q = I + (M(4) * O), M(3) = 0, R = L(7); ~SetDur(MG, BOX, R);~; ~OnFreq(MG, BOX, Q);~; ---> S1
 
 
 
