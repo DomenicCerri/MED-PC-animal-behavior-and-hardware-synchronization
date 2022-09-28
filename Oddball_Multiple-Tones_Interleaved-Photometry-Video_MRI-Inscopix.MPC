@@ -6,7 +6,7 @@
 \Timestamps: MRI = D, Standards = R, Oddballs = S, Novels = T, Inscopix Start+Stop = U, Photometry + Video = V
 
 \Created: 8/31/2022
-\Last Updated: 8/31/2022
+\Last Updated: 9/14/2022 4:30 PM EST
 
 \Defined Constants
 ^FAN = 10
@@ -29,6 +29,7 @@ DIM T = 9999
 DIM U = 9
 DIM V = 99999
 DIM Z = 26
+DIM Q = 2
 
 DISKCOLUMNS = 1
 
@@ -55,12 +56,12 @@ VAR_ALIAS Standard Tone Magnitude Shift [Hz] = M
 VAR_ALIAS Oddball Tone Frequency [Hz] = N
 VAR_ALIAS Oddball Tone Magnitude Shift [Hz] = O
 VAR_ALIAS Novel Tone Frequency [Hz] = P
-VAR_ALIAS Novel Tone Range [Hz] = Q
-VAR_ALIAS Novel Tone Magnitude Shift Range [Hz] = R
+VAR_ALIAS Novel Tone Range [Hz] = Q(0)
+VAR_ALIAS Novel Tone Magnitude Shift Range [Hz] = Q(1)
 
 \Other Variables
-\W = Copy of List Y for Novel Tone Randomization
 \X = Current Tone Frequency
+\Q(2) = Current Novel Tone
 \Z(0) = Tone Steps
 \Z(1) = Timer
 \Z(2) = Timer in ms
@@ -102,7 +103,7 @@ VAR_ALIAS Novel Tone Magnitude Shift Range [Hz] = R
 S.S.1, \Setup Start, Frequency Trigger, and Finish
     S1,
 	0.001": LOCKOFF ^PURPLE, ^BLUE, ^MRI, ^VIDEO, ^SPECT, ^INSCOPIX, ^FAN, ^TONES, ^TONEO, ^TONEN; ON ^PURPLE, ^BLUE, ^VIDEO, ^SPECT, ^INSCOPIX, ^FAN;
- 		SET A = 50, B = 5, C(0) = 0, C(1) = 2000, C(2) = 3, C(3) = 10, E = 80, F = 300, G = 2000, H = 100, I = 4, J = 4, K = 0, L = 5000, M = 0, N = 7000, O = 0, P = 9000, Q = 2000, R = 4000, Z(24) = 0;
+ 		SET A = 50, B = 5, C(0) = 0, C(1) = 2000, C(2) = 3, C(3) = 10, E = 80, F = 300, G = 2000, H = 100, I = 4, J = 4, K = 0, L = 5000, M = 0, N = 7000, O = 0, P = 9000, Q(0) = 2000, Q(1) = 4000, Z(24) = 0;
 		---> S2	
     S2,
 	#START: ~SetRack(MG, 1);~; \ The ANL-926 cards are in Rack 1
@@ -124,6 +125,9 @@ S.S.2, \Timer
 	#START: SET Z(1) = 0 ---> S2
     S2,
 	0.001": SET Z(1) = Z(1) + 0.001; Z7 ---> SX
+	#Z3: SET Z(1) = 0 ---> S3
+    S3,
+	0.001": SET Z(1) = Z(1) + 0.001; Z7 ---> SX
 
 S.S.3, \Interleaving Offset
     S1,
@@ -143,23 +147,25 @@ S.S.5, \MRI Triggers and Timestamps
 		@TRUE: ---> S2
 		@FALSE: ---> S4
     S2,
-	#Z1: ON ^MRI; SET D(Z(24)) = Z(1); ADD Z(24); SET D(Z(24)) = -987.987 ---> S3
+	#Z3: ON ^MRI; SET D(Z(24)) = Z(1); ADD Z(24); SET D(Z(24)) = -987.987 ---> S3
     S3,
 	#Z2: OFF ^MRI; SET D(Z(24)) = Z(1); ADD Z(24); SET D(Z(24)) = -987.987 ---> SX
     S4,
 	#Z7: ADD Z(26); IF Z(26) >= C(1) [@TRUE, @FALSE]
-		@TRUE: ON ^MRI; Z8; SET Z(26) = 0 ---> SX
+		@TRUE: Z8; SET Z(26) = 0 ---> SX
 		@FALSE: ---> SX
 
-S.S.6, \MRI Trigger OFF and Timestamps
+S.S.6, \MRI Frequency Triggers and Timestamps
     S1,
-	#Z8: SET D(Z(24)) = Z(1); ADD Z(24); SET D(Z(24)) = -987.987 ---> S2
+	#Z8: ---> S2
     S2,
+	B#T: ON ^MRI; SET D(Z(24)) = Z(1); ADD Z(24); SET D(Z(24)) = -987.987 ---> S3
+    S3,
 	C(3)#T: OFF ^MRI ---> S1	
 
 S.S.7, \Inscopix Triggers and Timestamps
     S1,
-	#Z1: OFF ^INSCOPIX; SET U(Z(3)) = Z(1); ADD Z(3); SET U(Z(3)) = -987.987 ---> S2
+	#Z3: OFF ^INSCOPIX; SET U(Z(3)) = Z(1); ADD Z(3); SET U(Z(3)) = -987.987 ---> S2
     S2,
 	#Z2: ON ^INSCOPIX; SET U(Z(3)) = Z(1); ADD Z(3); SET U(Z(3)) = -987.987 ---> SX
 
@@ -178,9 +184,9 @@ S.S.9, \Oddball Paradigm
 	#Z3: ADD Z(6); IF Z(6) >= Z(5) [@TRUE, @FALSE]
 		@TRUE: SET Z(6) = 0; ADD Z(10); IF Z(10) <= F [@TRUE, @FALSE]
 			@TRUE: RANDD Z(7) = Y; IF Z(7) > Z(9) [@TRUE, @FALSE]
-				@TRUE: IF Z(11) >= I AND Z(12) > 0 [@TRUE, @FALSE]
+				@TRUE: IF (Z(11) >= I) AND (Z(12) > 0) [@TRUE, @FALSE]
 					@TRUE: Z5; SUB Z(12); ADD Z(14); SET Z(11) = 0 ---> SX
-					@FALSE: IF Z(11) >= I AND Z(13) > 0 [@TRUE, @FALSE]
+					@FALSE: IF (Z(11) >= I) AND (Z(13) > 0) [@TRUE, @FALSE]
 						@TRUE: Z6; SUB Z(13); ADD Z(14); SET Z(11) = 0 ---> SX
 						@FALSE: Z4; ADD Z(11) ---> SX
 				@FALSE: IF Z(7) > Z(8) [@TRUE, @FALSE]
@@ -220,8 +226,8 @@ S.S.10, \Standard Tone
 	#Z4: SET X = L, Z(16) = 0; ADD Z(15); ~SetRF(MG, BOX, 10);~; ~SetDur(MG, BOX, H);~; ~OnFreq(MG, BOX, X);~; ---> S6
     S6,
 	0.005": SET Z(16) = Z(16) + (0.5 / Z(0)), Z(17) = 20.785 * (Z(16) - 0) * (Z(16) - 0.5) * (Z(16) - 1); ~SetRF(MG, BOX, 1);~; IF Z(15) < Z(0) [@TRUE, @FALSE]
-		@TRUE: SET X = X + (Z(17) * M); ADD Z(15); ~OnFreq(MG, BOX, X);~; ---> SX
-		@FALSE: SET X = X + (Z(17) * M), Z(15) = 0; ~SetDur(MG, BOX, 5);~; ~OnFreq(MG, BOX, X);~; ---> S5
+		@TRUE: SET X = L + (Z(17) * M); ADD Z(15); ~OnFreq(MG, BOX, X);~; ---> SX
+		@FALSE: SET X = L + (Z(17) * M), Z(15) = 0; ~SetDur(MG, BOX, 5);~; ~OnFreq(MG, BOX, X);~; ---> S5
 
 S.S.11, \Oddball Tone
     S1,
@@ -240,14 +246,14 @@ S.S.11, \Oddball Tone
 	#Z5: SET X = N, Z(16) = 0; ADD Z(15); ~SetRF(MG, BOX, 10);~; ~SetDur(MG, BOX, H);~; ~OnFreq(MG, BOX, X);~; ---> S6
     S6,
 	0.005": SET Z(16) = Z(16) + (0.5 / Z(0)), Z(17) = 20.785 * (Z(16) - 0) * (Z(16) - 0.5) * (Z(16) - 1); ~SetRF(MG, BOX, 1);~; IF Z(15) < Z(0) [@TRUE, @FALSE]
-		@TRUE: SET X = X + (Z(17) * O); ADD Z(15); ~OnFreq(MG, BOX, X);~; ---> SX
-		@FALSE: SET X = X + (Z(17) * O), Z(15) = 0; ~SetDur(MG, BOX, 5);~; ~OnFreq(MG, BOX, X);~; ---> S5
+		@TRUE: SET X = N + (Z(17) * O); ADD Z(15); ~OnFreq(MG, BOX, X);~; ---> SX
+		@FALSE: SET X = N + (Z(17) * O), Z(15) = 0; ~SetDur(MG, BOX, 5);~; ~OnFreq(MG, BOX, X);~; ---> S5
 
 S.S.12, \Novel Tone
     S1,
 	#START: IF P <= 0 [@TRUE, @FALSE]
 		@TRUE: ---> S2
-		@FALSE: IF R = 0 [@TRUE, @FALSE]
+		@FALSE: IF Q(1) = 0 [@TRUE, @FALSE]
 			@TRUE: ---> S4
 			@FALSE: ---> S5
     S2,
@@ -255,19 +261,19 @@ S.S.12, \Novel Tone
     S3,
 	H#T: OFF ^TONEO ---> S2
     S4,
-	#Z6: RANDD Z(18) = W; SET X = P - (Q/2) + (Q * (Z(18)/100)); ~SetRF(MG, BOX, 10);~; ~SetDur(MG, BOX, H);~; ~OnFreq(MG, BOX, X);~; ---> SX
+	#Z6: RANDD Z(18) = W; SET X = P - (Q(0)/2) + (Q(0) * (Z(18)/100)); ~SetRF(MG, BOX, 10);~; ~SetDur(MG, BOX, H);~; ~OnFreq(MG, BOX, X);~; ---> SX
     S5,
-	#Z6: RANDD Z(18) = W; SET X = P - (Q/2) + (Q * (Z(18)/100)); RANDD Z(19) = W; SET Z(20) = R - (R/2) + (R * (Z(19)/100)); ADD Z(15); ~SetRF(MG, BOX, 10);~; ~SetDur(MG, BOX, H);~; ~OnFreq(MG, BOX, X);~; ---> S6
+	#Z6: RANDD Z(18) = W; SET Q(2) = P - (Q(0)/2) + (Q(0) * (Z(18)/100)), X = Q(2); RANDD Z(19) = W; SET Z(20) = Q(1) - (Q(1)/2) + (Q(1) * (Z(19)/100)); ADD Z(15); ~SetRF(MG, BOX, 10);~; ~SetDur(MG, BOX, H);~; ~OnFreq(MG, BOX, X);~; ---> S6
     S6,
 	0.005": SET Z(16) = Z(16) + (0.5 / Z(0)), Z(17) = 20.785 * (Z(16) - 0) * (Z(16) - 0.5) * (Z(16) - 1); ~SetRF(MG, BOX, 1);~; IF Z(15) < Z(0) [@TRUE, @FALSE]
-		@TRUE: SET X = X + (Z(17) * Z(20)); ADD Z(15); ~OnFreq(MG, BOX, X);~; ---> SX
-		@FALSE: SET X = X + (Z(17) * Z(20)), Z(15) = 0; ~SetDur(MG, BOX, 5);~; ~OnFreq(MG, BOX, X);~; ---> S5
+		@TRUE: SET X = Q(2) + (Z(17) * Z(20)); ADD Z(15); ~OnFreq(MG, BOX, X);~; ---> SX
+		@FALSE: SET X = Q(2) + (Z(17) * Z(20)), Z(15) = 0; ~SetDur(MG, BOX, 5);~; ~OnFreq(MG, BOX, X);~; ---> S5
 
 S.S.13, \Timer Display
     S1,
-	#Z1: SET Z(2) = Z(1)*1000; IF ((F+1)*G-Z(2)-D*C)/1000 > 0 [@TRUE, @FALSE]
-		@TRUE: SHOW 2, Time Remaining, ((F+1)*G-Z(2)-D*C)/1000 ---> SX
-		@FALSE: SHOW 2, Extra Time, Z(2)/1000 ---> SX
+	#Z1: SET Z(2) = Z(1)*1000; IF (((F+1)*G)+(C(1)*C(2)))-Z(2) > 0 [@TRUE, @FALSE]
+		@TRUE: SHOW 2, Time Remaining, ((((F+1)*G)+(C(1)*C(2)))-Z(2))/1000 ---> SX
+		@FALSE: SHOW 2, Extra Time, -(((((F+1)*G)+(C(1)*C(2)))-Z(2))/1000) ---> SX
 
 S.S.14, \Spectrometer + Video Timestamps
     S1,
